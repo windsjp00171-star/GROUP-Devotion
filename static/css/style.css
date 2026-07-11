@@ -1,0 +1,580 @@
+/* GROUP-Devotion — 視覺基調參考「以馬忤斯路上」原型：
+   暖米調、圓角、無尖角、低彩度、慢動作，不做任何催促或計數的視覺語言。 */
+
+:root {
+  --color-bg-outer: #E9DFC7;
+  --color-bg-screen: #FAF2E0;
+  --color-card: #FFFCF5;
+  --color-card-border: #EFE6CE;
+  --color-ink: #493D2E;
+  --color-ink-soft: #6E6353;
+  --color-label: #8F836D;
+  --color-accent: #A98A55;
+  --color-muted: #A79C87;
+  --color-cta: #E2916A;
+  --color-cta-shadow: rgba(226, 145, 106, 0.35);
+  --color-success-bg: #EFF3E6;
+  --color-success-ink: #4E5F41;
+  --color-highlight: #F3DCA0;
+  --color-glow: rgba(239, 194, 107, 0.7);
+  --font-ui: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: 'Noto Serif TC', serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--color-bg-outer);
+  font-family: var(--font-ui);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+.frame {
+  position: relative;
+  max-width: 480px;
+  min-height: 100vh;
+  margin: 0 auto;
+  background: var(--color-bg-screen);
+  box-shadow: 0 0 60px rgba(73, 61, 46, 0.08);
+}
+
+.screen {
+  padding: 66px 20px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 100vh;
+}
+
+/* ---------- 教學按鈕 (Rule 15) ---------- */
+
+.tour-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 20;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--color-card-border);
+  background: var(--color-card);
+  color: var(--color-label);
+  font-family: var(--font-ui);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tour-popover {
+  position: absolute;
+  top: 58px;
+  right: 20px;
+  z-index: 21;
+  width: 240px;
+  background: var(--color-card);
+  border: 1px solid var(--color-card-border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 8px 24px rgba(73, 61, 46, 0.12);
+}
+
+.tour-popover p {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--color-ink-soft);
+}
+
+.tour-popover__close {
+  border: none;
+  background: none;
+  color: var(--color-accent);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* ---------- 首頁 ---------- */
+
+.home-header .eyebrow {
+  font-size: 13px;
+  color: var(--color-label);
+  margin: 0 0 4px;
+}
+
+.home-header h1 {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.passage-card {
+  background: var(--color-card);
+  border: 1px solid var(--color-card-border);
+  border-radius: 26px;
+  padding: 22px 20px;
+  box-shadow: 0 8px 24px rgba(73, 61, 46, 0.06);
+}
+
+.passage-ref {
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  color: var(--color-accent);
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
+.verse {
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 1.95;
+  color: var(--color-ink);
+  padding: 2px 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin: 0;
+  background: transparent;
+  transition: background 0.25s ease, box-shadow 0.25s ease;
+}
+
+.verse--marked {
+  background: var(--color-highlight);
+  box-shadow: 0 0 0 4px var(--color-highlight);
+}
+
+.prompt {
+  margin: 14px 0 0;
+  font-size: 15px;
+  color: var(--color-ink-soft);
+  line-height: 1.6;
+}
+
+.prompt-hint {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.reflection-form textarea {
+  width: 100%;
+  margin-top: 12px;
+  min-height: 64px;
+  border-radius: 16px;
+  border: 1px solid var(--color-card-border);
+  background: #FEFCF6;
+  padding: 12px 14px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  color: var(--color-ink);
+  resize: none;
+  outline: none;
+}
+
+.reflection-form textarea:focus {
+  border-color: var(--color-accent);
+}
+
+.btn {
+  display: block;
+  width: 100%;
+  text-align: center;
+  border-radius: 18px;
+  padding: 15px 0;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  text-decoration: none;
+  border: none;
+}
+
+.btn--primary {
+  margin-top: 14px;
+  background: var(--color-cta);
+  color: #fff;
+  box-shadow: 0 8px 18px var(--color-cta-shadow);
+}
+
+.btn--ghost {
+  background: var(--color-card);
+  border: 1px solid #DCCE9E;
+  color: #8A6D3B;
+  font-size: 15px;
+  padding: 14px 0;
+}
+
+.link-quiet {
+  display: block;
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  padding: 4px 0 8px;
+}
+
+.submitted-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--color-success-bg);
+  border-radius: 18px;
+  padding: 14px 16px;
+}
+
+.submitted-banner p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-success-ink);
+}
+
+.seed-dot {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 40% 60% 55% 45%;
+  background: linear-gradient(145deg, #B7D1A0, #7FA06B);
+}
+
+.home-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 10px;
+}
+
+.rule14-link {
+  text-align: center;
+  font-size: 11px;
+  color: var(--color-muted);
+}
+
+.rule14-link a {
+  color: var(--color-muted);
+}
+
+/* ---------- 碰撞畫面 ---------- */
+
+.collision-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.back-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-card);
+  border: 1px solid var(--color-card-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
+.collision-header h1 {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--color-ink);
+}
+
+.collision-ref {
+  font-size: 12px;
+  color: var(--color-accent);
+  margin: 2px 0 0;
+}
+
+.garden {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0 4px;
+}
+
+.garden-bed {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 10px 14px;
+  max-width: 320px;
+  padding: 20px 24px 14px;
+  border-radius: 50% / 40%;
+  background: radial-gradient(ellipse at center, rgba(143, 176, 122, 0.18), transparent 72%);
+}
+
+.garden-hint {
+  text-align: center;
+  font-size: 12px;
+  color: var(--color-muted);
+  margin: 0;
+}
+
+/* ---------- 小夥伴 ---------- */
+
+.mascot {
+  position: relative;
+  flex-shrink: 0;
+  animation: gentleBob 4s ease-in-out infinite;
+}
+
+.mascot--small { width: 56px; height: 56px; }
+.mascot--big { width: 120px; height: 120px; }
+
+.mascot__ear {
+  position: absolute;
+  background: #8FB07A;
+  border-radius: 50%;
+}
+.mascot--small .mascot__ear { width: 10px; height: 10px; top: -2px; }
+.mascot--small .mascot__ear--l { left: 14px; }
+.mascot--small .mascot__ear--r { left: 32px; }
+.mascot--big .mascot__ear { width: 18px; height: 18px; top: -4px; }
+.mascot--big .mascot__ear--l { left: 28px; }
+.mascot--big .mascot__ear--r { left: 70px; }
+
+.mascot__face {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #FBE7D2, #F3D0AC);
+}
+.mascot--small .mascot__face { inset: 6px 4px 4px 4px; box-shadow: inset -4px -6px 10px rgba(0, 0, 0, 0.05); }
+.mascot--big .mascot__face { inset: 12px 8px 8px 8px; box-shadow: inset -8px -12px 18px rgba(0, 0, 0, 0.06); }
+
+.mascot__eye {
+  position: absolute;
+  background: var(--color-ink);
+  border-radius: 50%;
+}
+.mascot--small .mascot__eye { width: 4px; height: 5px; top: 26px; }
+.mascot--small .mascot__eye--l { left: 18px; }
+.mascot--small .mascot__eye--r { left: 30px; }
+.mascot--big .mascot__eye { width: 8px; height: 10px; top: 54px; }
+.mascot--big .mascot__eye--l { left: 38px; }
+.mascot--big .mascot__eye--r { left: 68px; }
+
+.mascot__cheek {
+  position: absolute;
+  background: #F0A98F;
+  opacity: 0.55;
+  border-radius: 50%;
+}
+.mascot--small .mascot__cheek { width: 7px; height: 4px; top: 31px; }
+.mascot--small .mascot__cheek--l { left: 11px; }
+.mascot--small .mascot__cheek--r { left: 35px; }
+.mascot--big .mascot__cheek { width: 14px; height: 8px; top: 64px; }
+.mascot--big .mascot__cheek--l { left: 20px; }
+.mascot--big .mascot__cheek--r { left: 78px; }
+
+/* ---------- 領受記號：花／果／蝶／石 ---------- */
+
+.mark {
+  position: relative;
+  display: inline-block;
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.mark--tiny { width: 20px; height: 20px; }
+
+.mark--bloom {
+  animation: bloomIn 0.6s ease;
+  filter: drop-shadow(0 0 6px var(--color-glow));
+}
+
+/* 花 */
+.mark--flower .mark__petal {
+  position: absolute;
+  width: 43%;
+  height: 43%;
+  border-radius: 50%;
+  background: var(--mark-color, #E8A98A);
+  opacity: 0.85;
+}
+.mark--flower .mark__petal--t { top: 0; left: 28%; }
+.mark--flower .mark__petal--b { bottom: 0; left: 28%; }
+.mark--flower .mark__petal--l { top: 28%; left: 0; }
+.mark--flower .mark__petal--r { top: 28%; right: 0; }
+.mark--flower .mark__center {
+  position: absolute;
+  width: 34%;
+  height: 34%;
+  top: 33%;
+  left: 33%;
+  border-radius: 50%;
+  background: var(--color-highlight);
+}
+
+/* 果 */
+.mark--fruit { width: 24px; height: 26px; }
+.mark--fruit .mark__stem {
+  position: absolute;
+  width: 4px;
+  height: 8px;
+  background: #6E9159;
+  top: -4px;
+  left: 10px;
+  border-radius: 2px;
+}
+.mark--fruit .mark__body {
+  position: absolute;
+  width: 24px;
+  height: 22px;
+  top: 4px;
+  border-radius: 48% 52% 50% 50% / 55% 55% 45% 45%;
+  background: var(--mark-color, #E2916A);
+  box-shadow: inset -3px -4px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* 蝶 */
+.mark--butterfly { width: 30px; height: 22px; }
+.mark--butterfly .mark__wing {
+  position: absolute;
+  width: 13px;
+  height: 16px;
+  top: 2px;
+  background: var(--mark-color, #9FB3D9);
+  opacity: 0.85;
+}
+.mark--butterfly .mark__wing--l { left: 0; border-radius: 60% 40% 60% 40%; transform: rotate(-12deg); }
+.mark--butterfly .mark__wing--r { right: 0; border-radius: 40% 60% 40% 60%; transform: rotate(12deg); }
+.mark--butterfly .mark__antenna {
+  position: absolute;
+  width: 3px;
+  height: 14px;
+  background: var(--color-ink-soft);
+  left: 13.5px;
+  top: 3px;
+  border-radius: 2px;
+}
+
+/* 石 */
+.mark--stone { width: 26px; height: 20px; }
+.mark--stone .mark__rock {
+  position: absolute;
+  inset: 0;
+  background: var(--mark-color, #A6A08C);
+  border-radius: 55% 45% 60% 40% / 60% 55% 45% 40%;
+  box-shadow: inset -3px -3px 5px rgba(0, 0, 0, 0.1);
+}
+.mark--stone .mark__shine {
+  position: absolute;
+  width: 6px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  top: 4px;
+  left: 5px;
+}
+
+/* ---------- 領受卡（底部彈出） ---------- */
+
+.reveal-card {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  background: var(--color-card);
+  border-radius: 26px 26px 0 0;
+  border-top: 1px solid var(--color-card-border);
+  padding: 20px 22px 28px;
+  box-shadow: 0 -12px 30px rgba(73, 61, 46, 0.12);
+  z-index: 30;
+}
+
+.reveal-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.reveal-card__who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reveal-card__avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #F0C892, #E2916A);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reveal-card__name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.reveal-card__close {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #F3EEDF;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--color-label);
+  cursor: pointer;
+}
+
+.reveal-card__verse {
+  margin: 12px 0 0;
+  font-family: var(--font-serif);
+  font-size: 15px;
+  color: var(--color-ink-soft);
+  line-height: 1.7;
+  background: #FBF6E9;
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.reveal-card__note {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: var(--color-ink);
+  line-height: 1.7;
+}
+
+.reveal-card__note--empty {
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+/* ---------- 動畫 ---------- */
+
+@keyframes bloomIn {
+  0% { transform: scale(0.2); opacity: 0; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes gentleBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}

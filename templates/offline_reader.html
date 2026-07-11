@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>{{ passage.reference }} · 離線閱讀存檔</title>
+<style>
+  body { margin: 0; padding: 32px 20px 60px; background: #E9DFC7; font-family: -apple-system, "PingFang TC", "Noto Sans TC", sans-serif; color: #493D2E; }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .ref { font-size: 13px; color: #A98A55; margin: 0 0 24px; }
+  .note { font-size: 12px; color: #8F836D; background: #FFFCF5; border: 1px solid #EFE6CE; border-radius: 12px; padding: 12px 14px; margin-bottom: 24px; line-height: 1.6; }
+  .verse-block { background: #FFFCF5; border: 1px solid #EFE6CE; border-radius: 18px; padding: 18px 20px; margin-bottom: 24px; }
+  .verse-block p { font-family: "Noto Serif TC", serif; font-size: 16px; line-height: 1.9; margin: 0; }
+  .verse-block p + p { margin-top: 10px; }
+  .card { background: #FFFCF5; border: 1px solid #EFE6CE; border-radius: 16px; padding: 14px 16px; margin-bottom: 12px; }
+  .card .name { font-weight: 700; font-size: 14px; margin: 0 0 6px; }
+  .card .quote { font-family: "Noto Serif TC", serif; font-size: 14px; color: #6E6353; background: #FBF6E9; border-radius: 10px; padding: 8px 10px; margin: 0 0 8px; }
+  .card .body { font-size: 14px; margin: 0; }
+  .card .body--empty { color: #A79C87; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>同一段路上</h1>
+    <p class="ref">{{ passage.reference }} · 大家的領受（離線存檔）</p>
+    <p class="note">這是一頁不需要網路、不需要伺服器就能打開的存檔。另存新檔存到自己的電腦，就算服務停掉，這些領受也還在。</p>
+
+    <div class="verse-block">
+      {% for verse in passage.verses %}
+      <p>{{ verse }}</p>
+      {% endfor %}
+    </div>
+
+    {% for r in reflections %}
+    <div class="card">
+      <p class="name">{{ '你' if r.mine else r.name }}</p>
+      <p class="quote">「{{ passage.verses[r.verse_index] }}」</p>
+      {% if r.note and r.note.strip() %}
+      <p class="body">{{ r.note }}</p>
+      {% else %}
+      <p class="body body--empty">{{ '你' if r.mine else r.name }} 也在這句停下了腳步，沒有多寫什麼</p>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</body>
+</html>

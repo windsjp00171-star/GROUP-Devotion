@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}同一段路上{% endblock %}
+{% block tour_key %}collision{% endblock %}
+
+{% block content %}
+<div class="screen">
+
+  <header class="collision-header">
+    <a class="back-btn" href="{{ url_for('home') }}" aria-label="回到今天這段">
+      <svg width="8" height="14" viewBox="0 0 8 14"><path d="M7 1L1 7l6 6" stroke="#8F836D" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <div>
+      <h1>同一段路上</h1>
+      <p class="collision-ref">{{ passage.reference }} · 大家的領受</p>
+    </div>
+  </header>
+
+  <section class="garden">
+    <div class="mascot mascot--big" aria-hidden="true">
+      <span class="mascot__ear mascot__ear--l"></span>
+      <span class="mascot__ear mascot__ear--r"></span>
+      <span class="mascot__face"></span>
+      <span class="mascot__eye mascot__eye--l"></span>
+      <span class="mascot__eye mascot__eye--r"></span>
+      <span class="mascot__cheek mascot__cheek--l"></span>
+      <span class="mascot__cheek mascot__cheek--r"></span>
+    </div>
+
+    <div class="garden-bed" id="garden-bed">
+      {% for r in reflections %}
+      <button type="button"
+              class="mark mark--{{ r.kind }}{{ ' mark--mine mark--bloom' if r.mine else '' }}"
+              style="--mark-color:{{ r.color }}"
+              data-name="{{ '你' if r.mine else r.name }}"
+              data-initial="{{ ('你' if r.mine else r.name)[:1] }}"
+              data-verse="{{ passage.verses[r.verse_index] }}"
+              data-note="{{ r.note }}">
+        {% if r.kind == 'flower' %}
+          <span class="mark__petal mark__petal--t"></span>
+          <span class="mark__petal mark__petal--b"></span>
+          <span class="mark__petal mark__petal--l"></span>
+          <span class="mark__petal mark__petal--r"></span>
+          <span class="mark__center"></span>
+        {% elif r.kind == 'fruit' %}
+          <span class="mark__stem"></span>
+          <span class="mark__body"></span>
+        {% elif r.kind == 'butterfly' %}
+          <span class="mark__wing mark__wing--l"></span>
+          <span class="mark__wing mark__wing--r"></span>
+          <span class="mark__antenna"></span>
+        {% elif r.kind == 'stone' %}
+          <span class="mark__rock"></span>
+          <span class="mark__shine"></span>
+        {% endif %}
+      </button>
+      {% endfor %}
+    </div>
+  </section>
+
+  <p class="garden-hint">點點看，大家在同一段裡，停在了哪裡</p>
+
+  <p class="rule14-link">
+    <a href="{{ url_for('export', fmt='json') }}">匯出領受（JSON）</a> ·
+    <a href="{{ url_for('export', fmt='csv') }}">CSV</a> ·
+    <a href="{{ url_for('export', fmt='html') }}">離線閱讀頁</a>
+  </p>
+
+</div>
+
+<div class="reveal-card" id="reveal-card" hidden>
+  <div class="reveal-card__header">
+    <div class="reveal-card__who">
+      <span class="reveal-card__avatar" id="reveal-avatar"></span>
+      <span class="reveal-card__name" id="reveal-name"></span>
+    </div>
+    <button type="button" class="reveal-card__close" id="reveal-close" aria-label="關閉">×</button>
+  </div>
+  <p class="reveal-card__verse" id="reveal-verse"></p>
+  <p class="reveal-card__note" id="reveal-note"></p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/collision.js') }}"></script>
+{% endblock %}

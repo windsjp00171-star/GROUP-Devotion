@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}今天這段，一起讀讀看{% endblock %}
+{% block tour_key %}home{% endblock %}
+
+{% block content %}
+<div class="screen">
+
+  <header class="home-header">
+    <p class="eyebrow">恩典少年 · 小組</p>
+    <h1>今天這段，一起讀讀看</h1>
+  </header>
+
+  <section class="passage-card">
+    <p class="passage-ref">{{ passage.reference }}</p>
+
+    <div class="passage-text" id="passage-text">
+      {% for index, verse in verses %}
+      <p class="verse" data-verse-index="{{ index }}">{{ verse }}</p>
+      {% endfor %}
+    </div>
+
+    <p class="prompt">哪一句話，也讓你想停下腳步？</p>
+    <p class="prompt-hint">點一句、或寫下來，都可以</p>
+
+    {% if not submitted %}
+    <form class="reflection-form" method="post" action="{{ url_for('submit_reflection') }}">
+      <input type="hidden" name="verse_index" id="verse-index-input" value="">
+      <textarea name="note" placeholder="想多寫一點點也可以…（不寫也沒關係）"></textarea>
+      <button type="submit" class="btn btn--primary">留下我的領受</button>
+    </form>
+    <a class="link-quiet" href="{{ url_for('collision') }}">先看看大家怎麼讀（不寫也可以）</a>
+    {% else %}
+    <div class="submitted-banner">
+      <span class="seed-dot" aria-hidden="true"></span>
+      <p>種子留下了，謝謝你今天也在這裡</p>
+    </div>
+    <a class="btn btn--ghost" href="{{ url_for('collision') }}">看看大家怎麼讀這段 →</a>
+    {% endif %}
+  </section>
+
+  <footer class="home-footer">
+    <div class="mascot mascot--small" aria-hidden="true">
+      <span class="mascot__ear mascot__ear--l"></span>
+      <span class="mascot__ear mascot__ear--r"></span>
+      <span class="mascot__face"></span>
+      <span class="mascot__eye mascot__eye--l"></span>
+      <span class="mascot__eye mascot__eye--r"></span>
+      <span class="mascot__cheek mascot__cheek--l"></span>
+      <span class="mascot__cheek mascot__cheek--r"></span>
+    </div>
+    {% if submitted %}
+    <span class="mark mark--flower mark--tiny mark--bloom" style="--mark-color:#EFC26B" aria-hidden="true">
+      <span class="mark__petal mark__petal--t"></span>
+      <span class="mark__petal mark__petal--b"></span>
+      <span class="mark__petal mark__petal--l"></span>
+      <span class="mark__petal mark__petal--r"></span>
+      <span class="mark__center"></span>
+    </span>
+    {% endif %}
+  </footer>
+
+  <p class="rule14-link">
+    <a href="{{ url_for('export', fmt='json') }}">匯出領受（JSON）</a> ·
+    <a href="{{ url_for('export', fmt='csv') }}">CSV</a> ·
+    <a href="{{ url_for('export', fmt='html') }}">離線閱讀頁</a>
+  </p>
+
+</div>
+{% endblock %}

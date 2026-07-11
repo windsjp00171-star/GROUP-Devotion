@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}恩典少年 · 一起讀這段{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=Noto+Serif+TC:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="frame" data-tour-target="{% block tour_key %}home{% endblock %}">
+    <button class="tour-btn" type="button" data-tour aria-label="怎麼用這個地方？">?</button>
+
+    <div class="tour-popover" id="tour-popover" hidden>
+      <p id="tour-popover-text"></p>
+      <button type="button" class="tour-popover__close" id="tour-popover-close">好，我知道了</button>
+    </div>
+
+    {% block content %}{% endblock %}
+  </div>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
