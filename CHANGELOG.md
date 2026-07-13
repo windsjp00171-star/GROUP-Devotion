@@ -2,6 +2,27 @@
 
 本文件記錄 GROUP-Devotion 的重要變更，時間由新到舊排列。
 
+## [Unreleased] - 2026-07-13
+
+### 新增
+- 真正的資料層：接了 Supabase 就存真資料（`groups` / `members` / `daily_passages` / `reflections`，見 `schema.sql`），沒接就自動退回記憶體示範模式——兩條路走同一套程式碼，行為一致，不是兩套邏輯。
+- LINE Login OAuth 骨架（`auth.py`）：`/login`、`/line/callback`、`/logout`，寫法沿用天父日記 app.py 裡實際跑得動的授權碼流程。還沒有 LINE Channel 憑證之前，`/login` 會顯示「尚未設定」而不是報錯。
+- `@login_required`、`@admin_required` decorator，還有本機測試專用的 `/dev/login`（只在 `FLASK_DEBUG=1` 時才會註冊，正式站不會出現）。
+- 輔導後台 `/admin`：排定今天這段經文（出處／經文／引導問題），可以同時留下輔導自己的第一句領受（種頭香，冷啟動解法之一）。
+- 最小可用的 session-based CSRF 保護（`csrf.py`），套用在所有 POST 路由。
+- 首頁新增「到 bibile-actionbook 深度閱讀這段」連結（沿用天父日記已經在用、也驗證過可行的做法：連到部署好的網站，不是程式碼依賴）。
+
+### 重要發現：`mark_core` 目前不存在
+開工前照北極星文件把 bibile-actionbook、tianfu-diary 兩個姊妹 repo 加進來核對，發現專案簡報裡提到的「`mark_core` 共用套件」（`supabase_client` / `auth` / `csrf` / `notification_queue` / `@login_required` / 統一 API 回傳格式）**在帳號裡完全不存在**，兩個姊妹專案也都是各自 ad hoc 接 Supabase／LINE OAuth，並沒有真的共用套件可以 import。`vendor/bible_actionbook/` 這個目錄也只有兩個空的 `.gitkeep`，不是真的依賴機制。
+
+這一版做法：把姊妹專案裡「真的在跑」的模式抄過來（`create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)`、LINE OAuth 授權碼流程、session 存 user），`@login_required` decorator、CSRF、統一 API 回傳格式則是 GROUP-Devotion 自己第一次真的寫出來——不是「沿用」，是「補上」。`notification_queue` 涉及催討式通知，剛好也是北極律文件明訂的鐵律不做，這一版沒有實作、也不打算實作。
+
+### 待辦（卡在需要外部資源，先不做）
+- 接 Supabase 專案（帳號免費額度已被兩個既有專案佔滿，等你另開帳號給金鑰）。
+- 接真正的 LINE Channel 憑證（`LINE_CHANNEL_ID` / `LINE_CHANNEL_SECRET` / `LINE_REDIRECT_URI`，等你提供）。
+- 天父日記的每日經文排程後台目前是「照做一份自己的」，不是共用同一張表——沒有共用 Supabase 專案，這件事現階段做不到。
+- 圖鑑系統、多小組並行、co-op RPG、正式美術素材——北極星文件明訂的第二階段，這一版刻意不做。
+
 ## [Unreleased] - 2026-07-11
 
 ### 新增

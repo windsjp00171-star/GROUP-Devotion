@@ -20,11 +20,12 @@
       {% endfor %}
     </div>
 
-    <p class="prompt">哪一句話，也讓你想停下腳步？</p>
+    <p class="prompt">{{ passage.guiding_question }}</p>
     <p class="prompt-hint">點一句、或寫下來，都可以</p>
 
     {% if not submitted %}
     <form class="reflection-form" method="post" action="{{ url_for('submit_reflection') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="verse_index" id="verse-index-input" value="">
       <textarea name="note" placeholder="想多寫一點點也可以…（不寫也沒關係）"></textarea>
       <button type="submit" class="btn btn--primary">留下我的領受</button>
@@ -59,6 +60,12 @@
     </span>
     {% endif %}
   </footer>
+
+  {% if bible_actionbook_url %}
+  <p class="rule14-link">
+    <a href="{{ bible_actionbook_url }}" target="_blank" rel="noopener">到 bibile-actionbook 深度閱讀這段（人物／地點卡）→</a>
+  </p>
+  {% endif %}
 
   <p class="rule14-link">
     <a href="{{ url_for('export', fmt='json') }}">匯出領受（JSON）</a> ·

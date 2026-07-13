@@ -4,8 +4,7 @@
 
 每天小組讀同一段經文，留下一句領受，非同步看見彼此的領受，在小夥伴腳邊長出一叢屬於這個小組的花園。
 
-這個 repo 目前是第一版的 Flask + Jinja2 骨架。視覺與互動節奏參考「以馬忤斯路上」原型，
-但用我們自己的技術棧從頭實作，不是原型程式碼的搬移。
+視覺與互動節奏參考「以馬忤斯路上」原型，但用 Flask + Jinja2 + 純 HTML/CSS 從頭實作，不是原型程式碼的搬移。
 
 ## 本地執行
 
@@ -13,36 +12,61 @@
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+cp .env.example .env   # 先不填任何值也能跑，見下方「三種執行模式」
 python app.py
 ```
 
 開啟 http://127.0.0.1:5000
 
-目前資料存在記憶體裡（重啟伺服器就會回到示範資料），還沒接 Supabase，見下方「還沒做的事」。
+### 三種執行模式
+
+這個 app 會自動依照 `.env` 有沒有填值，決定自己跑在哪種模式，不用改程式碼：
+
+1. **完全沒填**：記憶體示範模式。畫面看得到、能點、能留領受，但重啟伺服器資料就重置，也沒有真的 LINE 登入（`/login` 會顯示「尚未設定」）。
+2. **本機測試登入**：把 `.env` 的 `FLASK_DEBUG` 設成 `1`，會多開放 `GET /dev/login`——跳過 LINE，直接假登入一個測試用身分，方便本機走完整個「登入 → 排經文 → 留領受」流程。正式站不要開這個。
+3. **接了 Supabase／LINE**：`.env` 填了 `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` 之後，資料真的存進資料庫；再填 `LINE_CHANNEL_ID` / `LINE_CHANNEL_SECRET` / `LINE_REDIRECT_URI` 之後，`/login` 會是真的 LINE 登入。兩個是分開生效的，只接 Supabase 不接 LINE 也可以先跑。
 
 ## 專案結構
 
 ```
-app.py                   Flask 路由
-data_store.py            資料層（先用記憶體；之後換成 Supabase 不用動路由）
-templates/                Jinja2 樣板
-static/css/style.css      視覺樣式（暖色、圓角、無壓力感）
-static/js/                純 JS，只處理畫面上的小互動（標記一句、打開領受卡），不是前端框架
+app.py                    Flask 路由
+auth.py                   LINE Login OAuth、@login_required / @admin_required
+csrf.py                   最小可用的 session-based CSRF 保護
+supabase_client.py        Supabase client 初始化（沒填環境變數就是 None）
+data_store.py             資料層：接了 Supabase 存真資料，沒接就退回記憶體示範資料
+schema.sql                Supabase 資料庫結構
+templates/                 Jinja2 樣板
+static/css/style.css       視覺樣式（暖色、圓角、無壓力感）
+static/js/                 純 JS，只處理畫面上的小互動（標記一句、打開領受卡），不是前端框架
 ```
 
 ## 目前做了什麼（第一版範圍）
 
 - 首頁：今天這段經文、可點一句標記、可留一句領受（文字選填，不寫也可以）
 - 碰撞畫面：小夥伴腳邊的花園，非同步看見小組每個人在這段經文停下的地方
+- 輔導後台 `/admin`：排定今天這段經文，可以同時種頭香（留自己的第一句領受）
+- LINE Login OAuth 骨架、`@login_required` / `@admin_required`、最小可用的 CSRF 保護
+- 首頁「到 bibile-actionbook 深度閱讀這段」連結
 - Rule 14 數位遺囑模組起點：一鍵匯出 + 離線閱讀器（見下）
 - Rule 15 教學按鈕（右上角「？」）
 - Rule 16 CHANGELOG.md
 
-## 還沒做的事（刻意先不做，避免手滑做歪）
+## 關於「沿用 mark_core」：這個套件目前不存在
 
-- 真正接 Supabase（目前是記憶體內的示範資料）
-- LINE Login OAuth、`mark_core` 共用模組（`supabase_client` / `auth` / `csrf` / `notification_queue` / `@login_required`）
-- 接天父日記的經文排程後台、bible-actionbook 的閱讀層／註釋引擎
+開工前把 bibile-actionbook、tianfu-diary 兩個姊妹 repo 加進來核對過，專案簡報裡提到的
+`mark_core` 共用套件（`supabase_client` / `auth` / `csrf` / `notification_queue` /
+`@login_required` / 統一 API 回傳格式）**目前在帳號裡並不存在**，兩個姊妹專案也都是
+各自 ad hoc 接 Supabase／LINE，沒有真的共用套件可以 import。細節記在 `CHANGELOG.md`。
+
+這一版的做法：把姊妹專案裡「真的在跑」的模式抄過來（Supabase client 初始化方式、
+LINE OAuth 授權碼流程），`@login_required`、CSRF 則是這個專案自己第一次寫出來，
+不是「沿用」而是「補上」——之後如果真的要建一個共用套件，這裡會是第一個可以抽出去的地方。
+
+## 還沒做的事（卡在需要外部資源，先不做）
+
+- 接 Supabase 專案（帳號免費額度已被兩個既有專案佔滿，等你另開帳號給金鑰）
+- 接真正的 LINE Channel 憑證
+- 天父日記的每日經文排程後台，目前是「照做一份自己的」，不是共用同一張表
 - 圖鑑系統、多小組、co-op RPG、正式美術素材——這些是北極星文件裡明訂的第二階段，這一版不做
 
 ## Rule 14：如果這個服務有一天收掉了
@@ -52,5 +76,3 @@ static/js/                純 JS，只處理畫面上的小互動（標記一句
 1. **一鍵匯出**：開啟 `/export/json` 或 `/export/csv`，下載今天這段經文的所有領受。
 2. **離線閱讀器**：開啟 `/export/html`，會產生一頁不需要伺服器、不需要網路就能打開的靜態頁面，另存新檔存到自己電腦就可以。
 3. **非技術交接**：只要能打開瀏覽器、能存檔案，不需要懂程式，就能把這些領受留下來、交給下一個接手的人。
-
-等接上 Supabase 之後，這三個管道會改成匯出資料庫裡真正的歷史資料；現在先確保「管道存在」。

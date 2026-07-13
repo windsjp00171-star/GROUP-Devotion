@@ -50,6 +50,16 @@ body {
 
 /* ---------- 教學按鈕 (Rule 15) ---------- */
 
+.logout-link {
+  position: absolute;
+  top: 24px;
+  left: 20px;
+  z-index: 20;
+  font-size: 12px;
+  color: var(--color-muted);
+  text-decoration: none;
+}
+
 .tour-btn {
   position: absolute;
   top: 20px;
@@ -94,6 +104,20 @@ body {
   font-weight: 600;
   cursor: pointer;
   padding: 0;
+}
+
+.screen--center {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex: 1;
+}
+
+.empty-state {
+  margin: 16px 0 0;
+  font-size: 14px;
+  color: var(--color-ink-soft);
+  line-height: 1.7;
 }
 
 /* ---------- 首頁 ---------- */
@@ -255,6 +279,51 @@ body {
 
 .rule14-link a {
   color: var(--color-muted);
+}
+
+/* ---------- 輔導後台 ---------- */
+
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-label {
+  font-size: 12px;
+  color: var(--color-label);
+  margin-top: 12px;
+}
+
+.admin-label:first-child {
+  margin-top: 0;
+}
+
+.admin-input,
+.admin-textarea {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid var(--color-card-border);
+  background: #FEFCF6;
+  padding: 10px 14px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  color: var(--color-ink);
+  outline: none;
+}
+
+.admin-textarea {
+  resize: vertical;
+  line-height: 1.7;
+}
+
+.admin-input:focus,
+.admin-textarea:focus {
+  border-color: var(--color-accent);
+}
+
+.admin-form .btn--primary {
+  margin-top: 16px;
 }
 
 /* ---------- 碰撞畫面 ---------- */
