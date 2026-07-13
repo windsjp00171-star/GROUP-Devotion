@@ -45,6 +45,12 @@ def _current_member_id():
     return member["id"] if member else None
 
 
+@app.route("/healthz")
+def healthz():
+    """部署平台的健康檢查用，刻意不用登入，不碰資料庫。"""
+    return "ok"
+
+
 @app.route("/")
 @login_required
 def home():
