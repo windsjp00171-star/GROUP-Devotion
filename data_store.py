@@ -165,10 +165,14 @@ def get_today_passage() -> dict | None:
     return result.data[0] if result.data else None
 
 
-def set_today_passage(reference: str, verses: list[str], guiding_question: str, leader_member_id: str) -> dict:
-    """輔導種頭香：排定今天這段經文。已經排過就更新，不會重複長出第二筆。"""
+def set_passage_for_date(
+    passage_date: str, reference: str, verses: list[str], guiding_question: str, leader_member_id: str
+) -> dict:
+    """排定某一天的經文（不限今天，讓輔導可以一次排好接下來好幾天）。
+    已經排過同一天就更新，不會重複長出第二筆。
+    """
     payload = {
-        "passage_date": date.today().isoformat(),
+        "passage_date": passage_date,
         "reference": reference,
         "verses": verses,
         "guiding_question": guiding_question or DEFAULT_GUIDING_QUESTION,
@@ -177,16 +181,43 @@ def set_today_passage(reference: str, verses: list[str], guiding_question: str, 
 
     if _demo_mode():
         global _demo_passage, _demo_reflections
-        # 換了一段新的經文，昨天那批領受不該掛在新的一段底下。
-        if _demo_passage is None or _demo_passage.get("reference") != reference:
-            _demo_reflections = []
-        _demo_passage = {"id": "demo-passage", **payload}
-        return _demo_passage
+        if passage_date == date.today().isoformat():
+            # 換了一段新的經文，昨天那批領受不該掛在新的一段底下。
+            if _demo_passage is None or _demo_passage.get("reference") != reference:
+                _demo_reflections = []
+            _demo_passage = {"id": "demo-passage", **payload}
+        return {"id": "demo-passage", **payload}
 
     group = get_or_create_default_group()
     payload["group_id"] = group["id"]
     result = sb.table("daily_passages").upsert(payload, on_conflict="group_id,passage_date").execute()
     return result.data[0]
+
+
+def set_today_passage(reference: str, verses: list[str], guiding_question: str, leader_member_id: str) -> dict:
+    """輔導種頭香：排定今天這段經文。"""
+    return set_passage_for_date(date.today().isoformat(), reference, verses, guiding_question, leader_member_id)
+
+
+def import_passages(rows: list[dict], leader_member_id: str) -> tuple[int, list[str]]:
+    """批次排經文：每一列 {date, reference, verses, guiding_question}。
+    回傳 (成功筆數, 失敗列的錯誤訊息)。單一列失敗不影響其他列。
+    """
+    ok = 0
+    errors: list[str] = []
+    for row in rows:
+        try:
+            set_passage_for_date(
+                row["date"],
+                row["reference"],
+                row["verses"],
+                row.get("guiding_question", ""),
+                leader_member_id,
+            )
+            ok += 1
+        except Exception as exc:  # noqa: BLE001 - 匯入時一列壞掉不能拖垮整批
+            errors.append(f"{row.get('date', '?')}：{exc}")
+    return ok, errors
 
 
 # ---------- 領受 ----------

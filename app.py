@@ -1,12 +1,14 @@
 import os
-from datetime import datetime
+from datetime import date, datetime
 import csv
 import io
 import json
 
+import openpyxl
 from dotenv import load_dotenv
 from flask import Flask, Response, redirect, render_template, request, url_for
 
+import ai_guide
 from auth import auth_bp, admin_required, get_user, is_admin, login_required, require_login
 from csrf import csrf_protect, csrf_token
 from data_store import (
@@ -15,8 +17,12 @@ from data_store import (
     get_member_by_line_id,
     get_reflections,
     get_today_passage,
+    import_passages,
+    set_passage_for_date,
     set_today_passage,
 )
+from plan_import import parse_plan_file
+from scripture import BOOK_NAMES, get_scripture
 
 load_dotenv()
 
@@ -93,6 +99,13 @@ def collision():
     return render_template("collision.html", passage=passage, reflections=reflections)
 
 
+def _guiding_question_or_ai(submitted: str, reference: str, verses: list[str]) -> str:
+    submitted = (submitted or "").strip()
+    if submitted:
+        return submitted
+    return ai_guide.generate_guiding_question(reference, verses) or ""
+
+
 @app.route("/admin", methods=["GET", "POST"])
 @admin_required
 def admin():
@@ -100,7 +113,7 @@ def admin():
         reference = (request.form.get("reference") or "").strip()
         verses_raw = request.form.get("verses") or ""
         verses = [line.strip() for line in verses_raw.splitlines() if line.strip()]
-        guiding_question = (request.form.get("guiding_question") or "").strip()
+        guiding_question = _guiding_question_or_ai(request.form.get("guiding_question"), reference, verses)
         leader_note = (request.form.get("leader_note") or "").strip()
 
         leader_member_id = _current_member_id()
@@ -117,6 +130,74 @@ def admin():
         passage=passage,
         user=get_user(),
         saved=request.args.get("saved") == "1",
+        imported=request.args.get("imported"),
+        import_errors=request.args.getlist("err"),
+        book_names=BOOK_NAMES,
+        ai_configured=ai_guide.is_configured(),
+        today=date.today().isoformat(),
+    )
+
+
+@app.route("/admin/schedule_by_range", methods=["POST"])
+@admin_required
+def admin_schedule_by_range():
+    passage_date = (request.form.get("date") or date.today().isoformat()).strip()
+    book = (request.form.get("book") or "").strip()
+    verse_range = (request.form.get("range") or "").strip()
+
+    verses = get_scripture(book, verse_range)
+    if not verses:
+        return redirect(url_for("admin", saved=0, err=f"找不到「{book} {verse_range}」，檢查一下書卷名稱跟章節格式"))
+
+    reference = f"{book} {verse_range}"
+    guiding_question = _guiding_question_or_ai(request.form.get("guiding_question"), reference, verses)
+    leader_member_id = _current_member_id()
+    passage = set_passage_for_date(passage_date, reference, verses, guiding_question, leader_member_id)
+
+    leader_note = (request.form.get("leader_note") or "").strip()
+    if leader_note and passage_date == date.today().isoformat():
+        add_my_reflection(passage["id"], leader_member_id, 0, leader_note)
+
+    return redirect(url_for("admin", saved=1))
+
+
+@app.route("/admin/import", methods=["POST"])
+@admin_required
+def admin_import():
+    file = request.files.get("plan_file")
+    if not file or not file.filename:
+        return redirect(url_for("admin", saved=0, err="沒有選擇檔案"))
+
+    rows, parse_errors = parse_plan_file(file.stream)
+
+    leader_member_id = _current_member_id()
+    for row in rows:
+        if not row["guiding_question"] and ai_guide.is_configured():
+            row["guiding_question"] = ai_guide.generate_guiding_question(row["reference"], row["verses"]) or ""
+
+    ok_count, save_errors = import_passages(rows, leader_member_id)
+    errors = parse_errors + save_errors
+
+    return redirect(url_for("admin", imported=ok_count, **({"err": errors} if errors else {})))
+
+
+@app.route("/admin/template")
+@admin_required
+def admin_template():
+    """下載空白的讀經計畫範本（跟天父日記的 plan.xlsx 同一種欄位）。"""
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.append(["date", "book", "range", "guiding_question"])
+    sheet.append(["2026-08-01", "路加福音", "24:13-17", ""])
+    sheet.append(["2026-08-02", "路加福音", "24:18-27", ""])
+
+    buf = io.BytesIO()
+    workbook.save(buf)
+    buf.seek(0)
+    return Response(
+        buf.read(),
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=plan_template.xlsx"},
     )
 
 

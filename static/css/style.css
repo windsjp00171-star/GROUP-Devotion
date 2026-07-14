@@ -283,6 +283,34 @@ body {
 
 /* ---------- 輔導後台 ---------- */
 
+.admin-section-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.admin-hint {
+  font-size: 12px;
+  color: var(--color-muted);
+  line-height: 1.6;
+  margin: -4px 0 0;
+}
+
+.admin-errors {
+  background: #FBEEE6;
+  border: 1px solid #E8C9AE;
+  border-radius: 14px;
+  padding: 10px 14px;
+}
+
+.admin-errors p {
+  margin: 4px 0;
+  font-size: 12px;
+  color: #8A5A34;
+  line-height: 1.6;
+}
+
 .admin-form {
   display: flex;
   flex-direction: column;

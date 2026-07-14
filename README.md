@@ -34,6 +34,10 @@ auth.py                   LINE Login OAuth、@login_required / @admin_required
 csrf.py                   最小可用的 session-based CSRF 保護
 supabase_client.py        Supabase client 初始化（沒填環境變數就是 None）
 data_store.py             資料層：接了 Supabase 存真資料，沒接就退回記憶體示範資料
+scripture.py              和合本查詢層：書卷＋章節 → 逐句經文陣列
+ai_guide.py                AI 生成引導問題（Groq → Gemini → Anthropic，都沒設定就回 None）
+plan_import.py            解析輔導上傳的 xlsx 讀經計畫
+scripture/cuv.json         和合本聖經全文（跟天父日記共用同一份資料）
 schema.sql                Supabase 資料庫結構
 templates/                 Jinja2 樣板
 static/css/style.css       視覺樣式（暖色、圓角、無壓力感）
@@ -44,7 +48,12 @@ static/js/                 純 JS，只處理畫面上的小互動（標記一�
 
 - 首頁：今天這段經文、可點一句標記、可留一句領受（文字選填，不寫也可以）
 - 碰撞畫面：小夥伴腳邊的花園，非同步看見小組每個人在這段經文停下的地方
-- 輔導後台 `/admin`：排定今天這段經文，可以同時種頭香（留自己的第一句領受）
+- 輔導後台 `/admin`：三種排經文的方式
+  - 書卷＋章節（選書卷、填章節，自動從和合本全文帶出經文）
+  - 批次匯入 xlsx（跟天父日記的 `plan.xlsx` 同一種欄位：`date / book / range / guiding_question`，一次排好接下來好幾天，`/admin/template` 可下載空白範本）
+  - 手動貼經文（沒有這卷書，或想自己改字句時的備案）
+  - 引導問題留空會用 AI 生一句（`GROQ_API_KEY` / `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` 擇一設定即可，優先順序 Groq → Gemini → Anthropic）
+  - 都可以同時種頭香（留自己的第一句領受，只對「今天」有效）
 - LINE Login OAuth 骨架、`@login_required` / `@admin_required`、最小可用的 CSRF 保護
 - 首頁「到 bibile-actionbook 深度閱讀這段」連結
 - Rule 14 數位遺囑模組起點：一鍵匯出 + 離線閱讀器（見下）

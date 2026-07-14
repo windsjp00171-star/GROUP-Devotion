@@ -8,7 +8,7 @@
 
   <header class="home-header">
     <p class="eyebrow">輔導後台</p>
-    <h1>排今天這段</h1>
+    <h1>排經文</h1>
   </header>
 
   {% if saved %}
@@ -18,7 +18,67 @@
   </div>
   {% endif %}
 
+  {% if imported is not none %}
+  <div class="submitted-banner">
+    <span class="seed-dot" aria-hidden="true"></span>
+    <p>匯入了 {{ imported }} 天的經文</p>
+  </div>
+  {% endif %}
+
+  {% if import_errors %}
+  <div class="admin-errors">
+    {% for e in import_errors %}
+    <p>{{ e }}</p>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if not ai_configured %}
+  <p class="admin-hint">還沒設定 AI key（GROQ_API_KEY / GEMINI_API_KEY / ANTHROPIC_API_KEY），引導問題留空的話會用預設那句，不會自動生成。</p>
+  {% endif %}
+
   <section class="passage-card">
+    <h2 class="admin-section-title">用書卷＋章節排一天（自動帶出經文）</h2>
+    <form class="admin-form" method="post" action="{{ url_for('admin_schedule_by_range') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <label class="admin-label" for="range-date">日期</label>
+      <input class="admin-input" type="date" id="range-date" name="date" value="{{ today }}">
+
+      <label class="admin-label" for="range-book">書卷</label>
+      <select class="admin-input" id="range-book" name="book" required>
+        {% for name in book_names %}
+        <option value="{{ name }}">{{ name }}</option>
+        {% endfor %}
+      </select>
+
+      <label class="admin-label" for="range-range">章節（例如 24:13-17，跨章可以 6:1-7:5）</label>
+      <input class="admin-input" type="text" id="range-range" name="range" placeholder="24:13-17" required>
+
+      <label class="admin-label" for="range-guiding">引導問題（留空 = 用 AI 生一句，沒設 AI key 就用預設那句）</label>
+      <input class="admin-input" type="text" id="range-guiding" name="guiding_question" placeholder="留空也可以">
+
+      <label class="admin-label" for="range-leader-note">你自己想先留的一句（種頭香，只對「今天」有效）</label>
+      <textarea class="admin-textarea" id="range-leader-note" name="leader_note" rows="2"
+                placeholder="不寫也可以，但寫一句會讓第一個打開的人不孤單"></textarea>
+
+      <button type="submit" class="btn btn--primary">排定這一天</button>
+    </form>
+  </section>
+
+  <section class="passage-card">
+    <h2 class="admin-section-title">批次匯入（一次排好接下來好幾天）</h2>
+    <p class="admin-hint">上傳 xlsx，欄位是 date / book / range / guiding_question（最後一個選填），跟天父日記的 plan.xlsx 同一種格式。</p>
+    <form class="admin-form" method="post" action="{{ url_for('admin_import') }}" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input class="admin-input" type="file" name="plan_file" accept=".xlsx" required>
+      <button type="submit" class="btn btn--primary">上傳並匯入</button>
+    </form>
+    <a class="link-quiet" href="{{ url_for('admin_template') }}">下載空白範本</a>
+  </section>
+
+  <section class="passage-card">
+    <h2 class="admin-section-title">手動貼經文（沒有這卷書，或想自己改字句時用）</h2>
     <form class="admin-form" method="post" action="{{ url_for('admin') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label class="admin-label" for="reference">出處（例如：路加福音 24:13–17 · 以馬忤斯路上）</label>
@@ -28,7 +88,7 @@
       <label class="admin-label" for="verses">經文（一行一句，不要逐節切碎，一段就好）</label>
       <textarea class="admin-textarea" id="verses" name="verses" rows="6" required>{{ (passage.verses | join('\n')) if passage else '' }}</textarea>
 
-      <label class="admin-label" for="guiding_question">引導問題（低門檻、非考題，例如「哪一句話，也讓你想停下腳步？」）</label>
+      <label class="admin-label" for="guiding_question">引導問題（留空 = 用 AI 生一句）</label>
       <input class="admin-input" type="text" id="guiding_question" name="guiding_question"
              placeholder="哪一句話，也讓你想停下腳步？"
              value="{{ passage.guiding_question if passage else '' }}">
