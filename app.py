@@ -168,15 +168,18 @@ def admin_import():
     if not file or not file.filename:
         return redirect(url_for("admin", saved=0, err="沒有選擇檔案"))
 
-    rows, parse_errors = parse_plan_file(file.stream)
+    try:
+        rows, parse_errors = parse_plan_file(file.stream)
 
-    leader_member_id = _current_member_id()
-    for row in rows:
-        if not row["guiding_question"] and ai_guide.is_configured():
-            row["guiding_question"] = ai_guide.generate_guiding_question(row["reference"], row["verses"]) or ""
+        leader_member_id = _current_member_id()
+        for row in rows:
+            if not row["guiding_question"] and ai_guide.is_configured():
+                row["guiding_question"] = ai_guide.generate_guiding_question(row["reference"], row["verses"]) or ""
 
-    ok_count, save_errors = import_passages(rows, leader_member_id)
-    errors = parse_errors + save_errors
+        ok_count, save_errors = import_passages(rows, leader_member_id)
+        errors = parse_errors + save_errors
+    except Exception as exc:  # noqa: BLE001 - 上傳檔案格式什麼都可能發生，這裡絕不能整頁 500
+        return redirect(url_for("admin", saved=0, err=f"匯入失敗：{exc}"))
 
     return redirect(url_for("admin", imported=ok_count, **({"err": errors} if errors else {})))
 
@@ -236,6 +239,14 @@ def export(fmt):
         return render_template("offline_reader.html", **data)
 
     return Response("unsupported export format", status=400)
+
+
+@app.errorhandler(500)
+def handle_server_error(exc):
+    """最後一道防線：任何沒被個別路由接住的例外，都顯示暖色系的錯誤頁，
+    不要讓使用者看到裸的 Flask 錯誤堆疊。實際錯誤內容還是會印進伺服器 log。"""
+    app.logger.exception("Unhandled error: %s", exc)
+    return render_template("error.html"), 500
 
 
 if __name__ == "__main__":

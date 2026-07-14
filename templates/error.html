@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}出了一點狀況{% endblock %}
+
+{% block content %}
+<div class="screen screen--center">
+  <div class="mascot mascot--small" aria-hidden="true">
+    <span class="mascot__ear mascot__ear--l"></span>
+    <span class="mascot__ear mascot__ear--r"></span>
+    <span class="mascot__face"></span>
+    <span class="mascot__eye mascot__eye--l"></span>
+    <span class="mascot__eye mascot__eye--r"></span>
+    <span class="mascot__cheek mascot__cheek--l"></span>
+    <span class="mascot__cheek mascot__cheek--r"></span>
+  </div>
+  <p class="empty-state">這裡出了一點狀況，晚點再試試看。</p>
+  <a class="link-quiet" href="{{ url_for('home') }}">回到今天這段</a>
+</div>
+{% endblock %}

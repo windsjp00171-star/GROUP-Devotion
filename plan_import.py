@@ -16,15 +16,24 @@ REQUIRED_COLUMNS = {"date", "book", "range"}
 
 
 def parse_plan_file(file_stream) -> tuple[list[dict], list[str]]:
-    """回傳 (可以排的列, 錯誤訊息)。單一列格式不對只跳過那一列，不會擋掉整批。"""
+    """回傳 (可以排的列, 錯誤訊息)。單一列格式不對只跳過那一列，不會擋掉整批。
+    整個檔案包在最外層 try/except——上傳的檔案什麼奇怪格式都可能出現，
+    這裡的原則是「解析失敗就回報錯誤訊息」，絕不能讓一個爛檔案把整個網站弄成 500。
+    """
     try:
-        workbook = openpyxl.load_workbook(file_stream, data_only=True)
-    except Exception as exc:  # noqa: BLE001 - 檔案本身壞掉，整批都不能排
-        return [], [f"讀不了這個檔案：{exc}"]
+        return _parse_plan_file(file_stream)
+    except Exception as exc:  # noqa: BLE001 - 見上方說明
+        return [], [f"讀取失敗：{exc}"]
+
+
+def _parse_plan_file(file_stream) -> tuple[list[dict], list[str]]:
+    workbook = openpyxl.load_workbook(file_stream, data_only=True)
 
     sheet = workbook.active
-    rows_iter = sheet.iter_rows(min_row=1, max_row=1)
-    header_row = next(rows_iter, None)
+    if sheet is None:
+        return [], ["這個檔案裡沒有工作表"]
+
+    header_row = next(sheet.iter_rows(min_row=1, max_row=1), None)
     if header_row is None:
         return [], ["空白檔案，沒有任何欄位"]
 
@@ -34,42 +43,49 @@ def parse_plan_file(file_stream) -> tuple[list[dict], list[str]]:
         return [], [f"缺少欄位：{'、'.join(sorted(missing))}（需要 date / book / range，guiding_question 選填）"]
 
     col_index = {name: i for i, name in enumerate(header)}
+    max_index = max(col_index.values())
     rows: list[dict] = []
     errors: list[str] = []
 
     for row_num, row in enumerate(sheet.iter_rows(min_row=2), start=2):
         values = [cell.value for cell in row]
+        if len(values) <= max_index:
+            values.extend([None] * (max_index + 1 - len(values)))
         if all(v is None or str(v).strip() == "" for v in values):
             continue
 
-        raw_date = values[col_index["date"]]
-        book = str(values[col_index["book"]] or "").strip()
-        rng = str(values[col_index["range"]] or "").strip()
-        guiding_question = ""
-        if "guiding_question" in col_index:
-            guiding_question = str(values[col_index["guiding_question"]] or "").strip()
+        try:
+            raw_date = values[col_index["date"]]
+            book = str(values[col_index["book"]] or "").strip()
+            rng = str(values[col_index["range"]] or "").strip()
+            guiding_question = ""
+            if "guiding_question" in col_index:
+                guiding_question = str(values[col_index["guiding_question"]] or "").strip()
 
-        if not raw_date or not book or not rng:
-            errors.append(f"第 {row_num} 列缺少 date / book / range，跳過")
+            if not raw_date or not book or not rng:
+                errors.append(f"第 {row_num} 列缺少 date / book / range，跳過")
+                continue
+
+            if isinstance(raw_date, (datetime, date)):
+                date_str = raw_date.strftime("%Y-%m-%d")
+            else:
+                date_str = str(raw_date).strip()
+
+            verses = get_scripture(book, rng)
+            if not verses:
+                errors.append(f"第 {row_num} 列（{date_str} {book} {rng}）找不到經文，跳過")
+                continue
+
+            rows.append(
+                {
+                    "date": date_str,
+                    "reference": f"{book} {rng}",
+                    "verses": verses,
+                    "guiding_question": guiding_question,
+                }
+            )
+        except Exception as exc:  # noqa: BLE001 - 單一列壞掉不能拖垮整批
+            errors.append(f"第 {row_num} 列讀取失敗，跳過：{exc}")
             continue
-
-        if isinstance(raw_date, (datetime, date)):
-            date_str = raw_date.strftime("%Y-%m-%d")
-        else:
-            date_str = str(raw_date).strip()
-
-        verses = get_scripture(book, rng)
-        if not verses:
-            errors.append(f"第 {row_num} 列（{date_str} {book} {rng}）找不到經文，跳過")
-            continue
-
-        rows.append(
-            {
-                "date": date_str,
-                "reference": f"{book} {rng}",
-                "verses": verses,
-                "guiding_question": guiding_question,
-            }
-        )
 
     return rows, errors
