@@ -227,23 +227,47 @@ def set_today_passage(reference: str, verses: list[str], guiding_question: str, 
 
 def import_passages(rows: list[dict], leader_member_id: str) -> tuple[int, list[str]]:
     """批次排經文：每一列 {date, reference, verses, guiding_question}。
-    回傳 (成功筆數, 失敗列的錯誤訊息)。單一列失敗不影響其他列。
+    回傳 (成功筆數, 失敗列的錯誤訊息)。
+
+    正式站一次打包成單一個請求 upsert，不是每一列各打一次 API——一次匯入
+    好幾十、好幾百天的話，逐列各打一次網路請求會慢到讓人以為當機（甚至真的
+    拖到 gunicorn worker timeout）。批次 upsert 是同一個 SQL 交易，單一列壞掉
+    會讓整批失敗，所以 plan_import.py 在解析階段已經先把明顯有問題的列擋掉。
     """
-    ok = 0
-    errors: list[str] = []
-    for row in rows:
-        try:
-            set_passage_for_date(
-                row["date"],
-                row["reference"],
-                row["verses"],
-                row.get("guiding_question", ""),
-                leader_member_id,
-            )
-            ok += 1
-        except Exception as exc:  # noqa: BLE001 - 匯入時一列壞掉不能拖垮整批
-            errors.append(f"{row.get('date', '?')}：{exc}")
-    return ok, errors
+    if not rows:
+        return 0, []
+
+    if _demo_mode():
+        ok = 0
+        errors: list[str] = []
+        for row in rows:
+            try:
+                set_passage_for_date(
+                    row["date"], row["reference"], row["verses"], row.get("guiding_question", ""), leader_member_id
+                )
+                ok += 1
+            except Exception as exc:  # noqa: BLE001 - 示範模式下單一列壞掉不能拖垮整批
+                errors.append(f"{row.get('date', '?')}：{exc}")
+        return ok, errors
+
+    group = get_or_create_default_group()
+    payloads = [
+        {
+            "group_id": group["id"],
+            "passage_date": row["date"],
+            "reference": row["reference"],
+            "verses": row["verses"],
+            "guiding_question": row.get("guiding_question", ""),
+            "created_by": leader_member_id,
+        }
+        for row in rows
+    ]
+
+    try:
+        sb.table("daily_passages").upsert(payloads, on_conflict="group_id,passage_date").execute()
+        return len(payloads), []
+    except Exception as exc:  # noqa: BLE001 - 整批寫入失敗，回報給使用者，不能讓網站 500
+        return 0, [f"批次寫入資料庫失敗：{exc}"]
 
 
 # ---------- 領受 ----------

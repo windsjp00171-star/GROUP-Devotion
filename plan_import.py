@@ -1,9 +1,8 @@
 """解析輔導上傳的 xlsx 讀經計畫：date / book / range / guiding_question 四欄
 （跟天父日記的 plan.xlsx 同一種欄位，方便你把既有的計畫表拿來改一改就能用）。
 
-`guiding_question` 欄位可以留空，留空就在排定的時候用 AI 生一句
-（有設定 GROQ_API_KEY / GEMINI_API_KEY / ANTHROPIC_API_KEY 才會生，
-都沒設定就退回預設的那句「哪一句話，也讓你想停下腳步？」）。
+`guiding_question` 欄位可以留空，留空就等那一天真的第一次被打開時才用 AI 生
+一句（見 data_store._resolve_guiding_question）——匯入的當下不會呼叫 AI。
 """
 
 from datetime import date, datetime
@@ -70,6 +69,11 @@ def _parse_plan_file(file_stream) -> tuple[list[dict], list[str]]:
                 date_str = raw_date.strftime("%Y-%m-%d")
             else:
                 date_str = str(raw_date).strip()
+                try:
+                    date_str = datetime.strptime(date_str, "%Y-%m-%d").strftime("%Y-%m-%d")
+                except ValueError:
+                    errors.append(f"第 {row_num} 列的日期「{date_str}」看不懂，格式要 YYYY-MM-DD，跳過")
+                    continue
 
             verses = get_scripture(book, rng)
             if not verses:
