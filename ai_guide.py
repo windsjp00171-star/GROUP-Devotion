@@ -5,6 +5,12 @@ Provider 偵測與系統提示語照抄天父日記 app.py 裡驗證過會動的
 這裡改成只生一題——接我們畫面上「引導問題」只有一句話的樣子。
 
 三個都沒設定 API key 就直接回傳 None，呼叫端退回預設的引導問題，不會壞掉。
+
+事故記錄：一開始沒設 max_retries/timeout，Groq 被打到 429 之後，SDK 內建的
+重試機制會 sleep 等下一次重試，一路睡到超過 gunicorn 的 worker timeout，
+被 gunicorn 從外面強制 kill worker（SystemExit），這種來自外部訊號的中斷
+不會被任何 try/except 接住，整個 request 直接掛掉。所以這裡每個 client
+都關掉 SDK 自己的重試、加短逾時，讓失敗快速回傳，不要用 sleep 卡住 worker。
 """
 
 import os
@@ -14,12 +20,15 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
+# 短逾時、不重試——寧可這次沒生出問題、退回預設那句，也不要卡住 gunicorn worker。
+_TIMEOUT_SECONDS = 12.0
+
 _groq_client = None
 if GROQ_API_KEY:
     try:
         from groq import Groq
 
-        _groq_client = Groq(api_key=GROQ_API_KEY)
+        _groq_client = Groq(api_key=GROQ_API_KEY, max_retries=0, timeout=_TIMEOUT_SECONDS)
     except Exception:
         _groq_client = None
 
@@ -38,7 +47,7 @@ if ANTHROPIC_API_KEY:
     try:
         import anthropic
 
-        _anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        _anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY, max_retries=0, timeout=_TIMEOUT_SECONDS)
     except Exception:
         _anthropic_client = None
 
@@ -78,7 +87,10 @@ def generate_guiding_question(reference: str, verses: List[str]) -> Optional[str
             return resp.choices[0].message.content.strip()
 
         if _gemini_model:
-            resp = _gemini_model.generate_content(f"{SYSTEM_PROMPT}\n\n{content}")
+            resp = _gemini_model.generate_content(
+                f"{SYSTEM_PROMPT}\n\n{content}",
+                request_options={"timeout": _TIMEOUT_SECONDS},
+            )
             return resp.text.strip()
 
         if _anthropic_client:

@@ -172,9 +172,16 @@ def admin_import():
         rows, parse_errors = parse_plan_file(file.stream)
 
         leader_member_id = _current_member_id()
+        # AI 第一次失敗（例如被 rate limit）就不要再繼續打，剩下的列直接退回預設問題——
+        # 一批匯入裡連續打好幾次注定失敗的 AI 請求，是拖垮 gunicorn worker timeout 的元兇。
+        ai_available = ai_guide.is_configured()
         for row in rows:
-            if not row["guiding_question"] and ai_guide.is_configured():
-                row["guiding_question"] = ai_guide.generate_guiding_question(row["reference"], row["verses"]) or ""
+            if not row["guiding_question"] and ai_available:
+                question = ai_guide.generate_guiding_question(row["reference"], row["verses"])
+                if question is None:
+                    ai_available = False
+                else:
+                    row["guiding_question"] = question
 
         ok_count, save_errors = import_passages(rows, leader_member_id)
         errors = parse_errors + save_errors
