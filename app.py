@@ -99,13 +99,6 @@ def collision():
     return render_template("collision.html", passage=passage, reflections=reflections)
 
 
-def _guiding_question_or_ai(submitted: str, reference: str, verses: list[str]) -> str:
-    submitted = (submitted or "").strip()
-    if submitted:
-        return submitted
-    return ai_guide.generate_guiding_question(reference, verses) or ""
-
-
 @app.route("/admin", methods=["GET", "POST"])
 @admin_required
 def admin():
@@ -113,7 +106,8 @@ def admin():
         reference = (request.form.get("reference") or "").strip()
         verses_raw = request.form.get("verses") or ""
         verses = [line.strip() for line in verses_raw.splitlines() if line.strip()]
-        guiding_question = _guiding_question_or_ai(request.form.get("guiding_question"), reference, verses)
+        # 留空不在這裡打 AI——等真的被打開那天才生一次、存回去（見 data_store._resolve_guiding_question）。
+        guiding_question = (request.form.get("guiding_question") or "").strip()
         leader_note = (request.form.get("leader_note") or "").strip()
 
         leader_member_id = _current_member_id()
@@ -150,7 +144,7 @@ def admin_schedule_by_range():
         return redirect(url_for("admin", saved=0, err=f"找不到「{book} {verse_range}」，檢查一下書卷名稱跟章節格式"))
 
     reference = f"{book} {verse_range}"
-    guiding_question = _guiding_question_or_ai(request.form.get("guiding_question"), reference, verses)
+    guiding_question = (request.form.get("guiding_question") or "").strip()
     leader_member_id = _current_member_id()
     passage = set_passage_for_date(passage_date, reference, verses, guiding_question, leader_member_id)
 
@@ -170,19 +164,10 @@ def admin_import():
 
     try:
         rows, parse_errors = parse_plan_file(file.stream)
-
+        # 引導問題留空的列，這裡不打 AI——等那一天真的被打開才生一次、存回去
+        # （見 data_store._resolve_guiding_question）。一次匯入好幾天，不該在
+        # 同一個請求裡連續打好幾次 AI，那是拖垮 gunicorn worker timeout 的元兇。
         leader_member_id = _current_member_id()
-        # AI 第一次失敗（例如被 rate limit）就不要再繼續打，剩下的列直接退回預設問題——
-        # 一批匯入裡連續打好幾次注定失敗的 AI 請求，是拖垮 gunicorn worker timeout 的元兇。
-        ai_available = ai_guide.is_configured()
-        for row in rows:
-            if not row["guiding_question"] and ai_available:
-                question = ai_guide.generate_guiding_question(row["reference"], row["verses"])
-                if question is None:
-                    ai_available = False
-                else:
-                    row["guiding_question"] = question
-
         ok_count, save_errors = import_passages(rows, leader_member_id)
         errors = parse_errors + save_errors
     except Exception as exc:  # noqa: BLE001 - 上傳檔案格式什麼都可能發生，這裡絕不能整頁 500

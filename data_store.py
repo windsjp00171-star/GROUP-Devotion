@@ -8,6 +8,7 @@ import os
 import uuid
 from datetime import date
 
+import ai_guide
 from supabase_client import sb
 
 DEFAULT_GROUP_NAME = "恩典少年"
@@ -151,7 +152,7 @@ def get_member_by_line_id(line_user_id: str) -> dict | None:
 def get_today_passage() -> dict | None:
     """回傳今天這段經文；如果小組今天還沒有輔導排經文，回傳 None。"""
     if _demo_mode():
-        return _demo_passage
+        return _resolve_guiding_question(_demo_passage) if _demo_passage else None
 
     group = get_or_create_default_group()
     result = (
@@ -162,7 +163,31 @@ def get_today_passage() -> dict | None:
         .limit(1)
         .execute()
     )
-    return result.data[0] if result.data else None
+    passage = result.data[0] if result.data else None
+    return _resolve_guiding_question(passage) if passage else None
+
+
+def _resolve_guiding_question(passage: dict) -> dict:
+    """引導問題留空的話，第一次真的被打開時才生一次、存回去，之後就是同一句
+    （跟天父日記的做法一樣：AI 只呼叫一次，不是每個人打開都重新生一次）。
+    這裡故意不在排經文／批次匯入當下就呼叫 AI——匯入一次可能是好幾天份，
+    每一天都各自打一次 AI，很容易在單一個請求裡連續打好幾次而被 rate limit。
+    """
+    if passage.get("guiding_question"):
+        return passage
+
+    question = ai_guide.generate_guiding_question(passage["reference"], passage["verses"])
+    question = question or DEFAULT_GUIDING_QUESTION
+    passage["guiding_question"] = question
+
+    if _demo_mode():
+        global _demo_passage
+        if _demo_passage and _demo_passage.get("id") == passage.get("id"):
+            _demo_passage["guiding_question"] = question
+    else:
+        sb.table("daily_passages").update({"guiding_question": question}).eq("id", passage["id"]).execute()
+
+    return passage
 
 
 def set_passage_for_date(
@@ -170,12 +195,13 @@ def set_passage_for_date(
 ) -> dict:
     """排定某一天的經文（不限今天，讓輔導可以一次排好接下來好幾天）。
     已經排過同一天就更新，不會重複長出第二筆。
+    引導問題留空就先存空的，等真的被打開那天再生（見 _resolve_guiding_question）。
     """
     payload = {
         "passage_date": passage_date,
         "reference": reference,
         "verses": verses,
-        "guiding_question": guiding_question or DEFAULT_GUIDING_QUESTION,
+        "guiding_question": guiding_question,
         "created_by": leader_member_id,
     }
 

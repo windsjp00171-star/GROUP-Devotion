@@ -55,7 +55,7 @@
       <label class="admin-label" for="range-range">章節（例如 24:13-17，跨章可以 6:1-7:5）</label>
       <input class="admin-input" type="text" id="range-range" name="range" placeholder="24:13-17" required>
 
-      <label class="admin-label" for="range-guiding">引導問題（留空 = 用 AI 生一句，沒設 AI key 就用預設那句）</label>
+      <label class="admin-label" for="range-guiding">引導問題（留空 = 這天第一次被打開時自動生一句，沒設 AI key 就用預設那句）</label>
       <input class="admin-input" type="text" id="range-guiding" name="guiding_question" placeholder="留空也可以">
 
       <label class="admin-label" for="range-leader-note">你自己想先留的一句（種頭香，只對「今天」有效）</label>
@@ -88,7 +88,7 @@
       <label class="admin-label" for="verses">經文（一行一句，不要逐節切碎，一段就好）</label>
       <textarea class="admin-textarea" id="verses" name="verses" rows="6" required>{{ (passage.verses | join('\n')) if passage else '' }}</textarea>
 
-      <label class="admin-label" for="guiding_question">引導問題（留空 = 用 AI 生一句）</label>
+      <label class="admin-label" for="guiding_question">引導問題（留空 = 這天第一次被打開時自動生一句）</label>
       <input class="admin-input" type="text" id="guiding_question" name="guiding_question"
              placeholder="哪一句話，也讓你想停下腳步？"
              value="{{ passage.guiding_question if passage else '' }}">
