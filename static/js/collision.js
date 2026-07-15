@@ -18,16 +18,28 @@ document.addEventListener('DOMContentLoaded', () => {
     activeMark = mark;
     nameEl.textContent = mark.dataset.name;
     avatarEl.textContent = mark.dataset.initial;
-    verseEl.textContent = `「${mark.dataset.verse}」`;
 
+    const hasVerse = mark.dataset.verse !== undefined;
     const note = mark.dataset.note || '';
-    if (note.trim().length > 0) {
-      noteEl.textContent = note;
-      noteEl.classList.remove('reveal-card__note--empty');
+
+    if (hasVerse) {
+      verseEl.hidden = false;
+      verseEl.textContent = `「${mark.dataset.verse}」`;
+      if (note.trim().length > 0) {
+        noteEl.textContent = note;
+        noteEl.classList.remove('reveal-card__note--empty');
+      } else {
+        noteEl.textContent = `${mark.dataset.name} 也在這句停下了腳步，沒有多寫什麼`;
+        noteEl.classList.add('reveal-card__note--empty');
+      }
     } else {
-      noteEl.textContent = `${mark.dataset.name} 也在這句停下了腳步，沒有多寫什麼`;
+      // 「我也讀了」：沒有標記哪一句，也沒寫字，就不要硬引一句他沒選的經文。
+      verseEl.hidden = true;
+      verseEl.textContent = '';
+      noteEl.textContent = `${mark.dataset.name} 也讀了這段`;
       noteEl.classList.add('reveal-card__note--empty');
     }
+
     card.hidden = false;
   }
 

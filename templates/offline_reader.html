@@ -34,11 +34,15 @@
     {% for r in reflections %}
     <div class="card">
       <p class="name">{{ '你' if r.mine else r.name }}</p>
+      {% if r.verse_index is not none %}
       <p class="quote">「{{ passage.verses[r.verse_index] }}」</p>
       {% if r.note and r.note.strip() %}
       <p class="body">{{ r.note }}</p>
       {% else %}
       <p class="body body--empty">{{ '你' if r.mine else r.name }} 也在這句停下了腳步，沒有多寫什麼</p>
+      {% endif %}
+      {% else %}
+      <p class="body body--empty">{{ '你' if r.mine else r.name }} 也讀了這段</p>
       {% endif %}
     </div>
     {% endfor %}

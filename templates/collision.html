@@ -34,7 +34,7 @@
               style="--mark-color:{{ r.color }}"
               data-name="{{ '你' if r.mine else r.name }}"
               data-initial="{{ ('你' if r.mine else r.name)[:1] }}"
-              data-verse="{{ passage.verses[r.verse_index] }}"
+              {% if r.verse_index is not none %}data-verse="{{ passage.verses[r.verse_index] }}"{% endif %}
               data-note="{{ r.note }}">
         {% if r.kind == 'flower' %}
           <span class="mark__petal mark__petal--t"></span>

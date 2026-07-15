@@ -38,7 +38,8 @@ create table if not exists reflections (
   id uuid primary key default gen_random_uuid(),
   passage_id uuid not null references daily_passages(id) on delete cascade,
   member_id uuid not null references members(id) on delete cascade,
-  verse_index int not null default 0,
+  -- null = 只是讀過，沒有標記特定一句（「我也讀了」那個輕量按鈕）
+  verse_index int,
   note text not null default '',
   kind text not null default 'flower' check (kind in ('flower', 'fruit', 'butterfly', 'stone')),
   color text not null default '#EFC26B',

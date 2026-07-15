@@ -82,7 +82,14 @@ def submit_reflection():
     if not passage:
         return redirect(url_for("home"))
 
-    verse_index = request.form.get("verse_index", type=int) or 0
+    # 「我也讀了」：完全沒標記哪一句，也沒寫字，純粹只是「我在這裡」。
+    if request.form.get("read_only") == "1":
+        add_my_reflection(passage["id"], _current_member_id(), None, "")
+        return redirect(url_for("home"))
+
+    # 沒特別標記哪一句就留 None，不要偷偷歸給第 0 句——
+    # 之後在碰撞畫面才不會引用一句他根本沒選的經文。
+    verse_index = request.form.get("verse_index", type=int)
     note = (request.form.get("note") or "").strip()
     add_my_reflection(passage["id"], _current_member_id(), verse_index, note)
     return redirect(url_for("home"))
@@ -220,7 +227,8 @@ def export(fmt):
         writer = csv.writer(buf)
         writer.writerow(["name", "verse", "note"])
         for r in data["reflections"]:
-            writer.writerow([r["name"], data["passage"]["verses"][r["verse_index"]], r["note"]])
+            verse = data["passage"]["verses"][r["verse_index"]] if r["verse_index"] is not None else ""
+            writer.writerow([r["name"], verse, r["note"]])
         return Response(
             buf.getvalue(),
             mimetype="text/csv",

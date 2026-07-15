@@ -318,8 +318,10 @@ def get_my_reflection(passage_id: str, member_id: str) -> dict | None:
     return result.data[0] if result.data else None
 
 
-def add_my_reflection(passage_id: str, member_id: str, verse_index: int, note: str) -> dict:
-    """留一句領受。已經留過的話就更新內容，不會重複長出第二朵花。"""
+def add_my_reflection(passage_id: str, member_id: str, verse_index: int | None, note: str) -> dict:
+    """留一句領受，或只是登記「我也讀了」（verse_index 是 None）。
+    已經留過的話就更新內容，不會重複長出第二朵花。
+    """
     payload = {
         "passage_id": passage_id,
         "member_id": member_id,

@@ -29,6 +29,11 @@
       <textarea name="note" placeholder="想多寫一點點也可以…（不寫也沒關係）"></textarea>
       <button type="submit" class="btn btn--primary">留下我的領受</button>
     </form>
+    <form method="post" action="{{ url_for('submit_reflection') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="read_only" value="1">
+      <button type="submit" class="link-btn">我也讀了（沒有特別想寫的也可以）</button>
+    </form>
     <a class="link-quiet" href="{{ url_for('collision') }}">先看看大家怎麼讀（不寫也可以）</a>
     {% else %}
     <div class="submitted-banner">
