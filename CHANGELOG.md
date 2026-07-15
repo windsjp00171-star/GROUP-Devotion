@@ -5,7 +5,10 @@
 ## [Unreleased] - 2026-07-15
 
 ### 修正
-- 正式站 `/admin/import` 500：Groq 被 rate limit（429）後，SDK 內建重試機制 sleep 到超過 gunicorn worker timeout，被外部訊號強制 kill worker，不是一般的 Python 例外，先前的 try/except 防呆完全接不住。修法：Groq／Anthropic client 關掉 SDK 自己的重試、加 12 秒短逾時；Gemini 呼叫加逾時；批次匯入時 AI 第一次失敗就不再繼續打，其餘列直接用預設引導問題；gunicorn 加 `--timeout 45` 當最後一道防線。
+- 正式站 `/admin/import` 500：Groq 被 rate limit（429）後，SDK 內建重試機制 sleep 到超過 gunicorn worker timeout，被外部訊號強制 kill worker，不是一般的 Python 例外，先前的 try/except 防呆完全接不住。修法：Groq／Anthropic client 關掉 SDK 自己的重試、加 12 秒短逾時；Gemini 呼叫加逾時；gunicorn 加 `--timeout 45` 當最後一道防線。
+
+### 變更
+- 引導問題改成懶生成：排經文／批次匯入的當下不再呼叫 AI，改成那一天真的第一次被打開時才生一句、存回 `daily_passages.guiding_question`，之後同一天不管誰打開幾次都直接用存好的，不會重複呼叫 AI。照天父日記真實的做法（AI 只呼叫一次、結果快取／存起來給後面的人重複用），也徹底解決批次匯入時一次打好幾次 AI 的根本問題（不是治標的 rate-limit 防呆，是從源頭上把呼叫次數降到最少）。
 
 ## [Unreleased] - 2026-07-14
 
