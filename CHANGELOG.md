@@ -2,6 +2,11 @@
 
 本文件記錄 GROUP-Devotion 的重要變更，時間由新到舊排列。
 
+## [Unreleased] - 2026-07-15
+
+### 修正
+- 正式站 `/admin/import` 500：Groq 被 rate limit（429）後，SDK 內建重試機制 sleep 到超過 gunicorn worker timeout，被外部訊號強制 kill worker，不是一般的 Python 例外，先前的 try/except 防呆完全接不住。修法：Groq／Anthropic client 關掉 SDK 自己的重試、加 12 秒短逾時；Gemini 呼叫加逾時；批次匯入時 AI 第一次失敗就不再繼續打，其餘列直接用預設引導問題；gunicorn 加 `--timeout 45` 當最後一道防線。
+
 ## [Unreleased] - 2026-07-14
 
 ### 新增
