@@ -71,10 +71,19 @@ static/js/                 純 JS，只處理畫面上的小互動（標記一�
 LINE OAuth 授權碼流程），`@login_required`、CSRF 則是這個專案自己第一次寫出來，
 不是「沿用」而是「補上」——之後如果真的要建一個共用套件，這裡會是第一個可以抽出去的地方。
 
+## 資料庫異動（migration）
+
+`schema.sql` 是完整結構，但正式站的資料庫已經在跑，新增欄位要手動補：
+
+```sql
+-- 2026-07-16：verse_index 改成可以是 null（「我也讀了」不標記任何一句）
+alter table reflections alter column verse_index drop not null;
+```
+
+到 Supabase 專案的 SQL Editor 貼上執行一次就好，既有資料不受影響。
+
 ## 還沒做的事（卡在需要外部資源，先不做）
 
-- 接 Supabase 專案（帳號免費額度已被兩個既有專案佔滿，等你另開帳號給金鑰）
-- 接真正的 LINE Channel 憑證
 - 天父日記的每日經文排程後台，目前是「照做一份自己的」，不是共用同一張表
 - 圖鑑系統、多小組、co-op RPG、正式美術素材——這些是北極星文件裡明訂的第二階段，這一版不做
 
