@@ -16,7 +16,7 @@
     </div>
   </header>
 
-  <section class="garden">
+  <section class="garden" data-tour-step="1" data-tour-text="這是小夥伴的花園，聚了小組每個人在這段經文停下的地方。">
     <div class="mascot mascot--big" aria-hidden="true">
       <span class="mascot__ear mascot__ear--l"></span>
       <span class="mascot__ear mascot__ear--r"></span>
@@ -35,7 +35,8 @@
               data-name="{{ '你' if r.mine else r.name }}"
               data-initial="{{ ('你' if r.mine else r.name)[:1] }}"
               {% if r.verse_index is not none %}data-verse="{{ passage.verses[r.verse_index] }}"{% endif %}
-              data-note="{{ r.note }}">
+              data-note="{{ r.note }}"
+              {% if loop.first %}data-tour-step="2" data-tour-text="點一朵看看，你會看到他停在哪裡、想到了什麼。"{% endif %}>
         {% if r.kind == 'flower' %}
           <span class="mark__petal mark__petal--t"></span>
           <span class="mark__petal mark__petal--b"></span>
