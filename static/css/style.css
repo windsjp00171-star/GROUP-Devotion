@@ -50,11 +50,17 @@ body {
 
 /* ---------- 教學按鈕 (Rule 15) ---------- */
 
-.logout-link {
+.account-links {
   position: absolute;
   top: 24px;
   left: 20px;
   z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logout-link {
   font-size: 12px;
   color: var(--color-muted);
   text-decoration: none;

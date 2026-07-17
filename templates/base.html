@@ -14,7 +14,12 @@
   <div class="frame" data-tour-target="{% block tour_key %}home{% endblock %}">
     <button class="tour-btn" type="button" data-tour aria-label="重新看一次導覽">?</button>
     {% if current_user %}
-    <a class="logout-link" href="{{ url_for('auth.logout') }}">登出</a>
+    <div class="account-links">
+      {% if current_user_is_admin %}
+      <a class="logout-link" href="{{ url_for('admin') }}">後台</a>
+      {% endif %}
+      <a class="logout-link" href="{{ url_for('auth.logout') }}">登出</a>
+    </div>
     {% endif %}
 
     {% block content %}{% endblock %}

@@ -6,9 +6,9 @@
 
 import os
 import uuid
-from datetime import date
 
 import ai_guide
+import local_time
 from supabase_client import sb
 
 DEFAULT_GROUP_NAME = "恩典少年"
@@ -159,7 +159,7 @@ def get_today_passage() -> dict | None:
         sb.table("daily_passages")
         .select("*")
         .eq("group_id", group["id"])
-        .eq("passage_date", date.today().isoformat())
+        .eq("passage_date", local_time.today().isoformat())
         .limit(1)
         .execute()
     )
@@ -207,7 +207,7 @@ def set_passage_for_date(
 
     if _demo_mode():
         global _demo_passage, _demo_reflections
-        if passage_date == date.today().isoformat():
+        if passage_date == local_time.today().isoformat():
             # 換了一段新的經文，昨天那批領受不該掛在新的一段底下。
             if _demo_passage is None or _demo_passage.get("reference") != reference:
                 _demo_reflections = []
@@ -222,7 +222,7 @@ def set_passage_for_date(
 
 def set_today_passage(reference: str, verses: list[str], guiding_question: str, leader_member_id: str) -> dict:
     """輔導種頭香：排定今天這段經文。"""
-    return set_passage_for_date(date.today().isoformat(), reference, verses, guiding_question, leader_member_id)
+    return set_passage_for_date(local_time.today().isoformat(), reference, verses, guiding_question, leader_member_id)
 
 
 def import_passages(rows: list[dict], leader_member_id: str) -> tuple[int, list[str]]:

@@ -1,5 +1,5 @@
 import os
-from datetime import date, datetime
+from datetime import datetime
 import csv
 import io
 import json
@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from flask import Flask, Response, redirect, render_template, request, url_for
 
 import ai_guide
+import local_time
 from auth import auth_bp, admin_required, get_user, is_admin, login_required, require_login
 from csrf import csrf_protect, csrf_token
 from data_store import (
@@ -135,14 +136,14 @@ def admin():
         import_errors=request.args.getlist("err"),
         book_names=BOOK_NAMES,
         ai_configured=ai_guide.is_configured(),
-        today=date.today().isoformat(),
+        today=local_time.today().isoformat(),
     )
 
 
 @app.route("/admin/schedule_by_range", methods=["POST"])
 @admin_required
 def admin_schedule_by_range():
-    passage_date = (request.form.get("date") or date.today().isoformat()).strip()
+    passage_date = (request.form.get("date") or local_time.today().isoformat()).strip()
     book = (request.form.get("book") or "").strip()
     verse_range = (request.form.get("range") or "").strip()
 
@@ -156,7 +157,7 @@ def admin_schedule_by_range():
     passage = set_passage_for_date(passage_date, reference, verses, guiding_question, leader_member_id)
 
     leader_note = (request.form.get("leader_note") or "").strip()
-    if leader_note and passage_date == date.today().isoformat():
+    if leader_note and passage_date == local_time.today().isoformat():
         add_my_reflection(passage["id"], leader_member_id, 0, leader_note)
 
     return redirect(url_for("admin", saved=1))
