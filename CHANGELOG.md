@@ -2,6 +2,18 @@
 
 本文件記錄 GROUP-Devotion 的重要變更，時間由新到舊排列。
 
+## [Unreleased] - 2026-07-18（更晚）
+
+### 修正
+- 經文出處（`passage.reference`）比較長的時候（例如批次匯入逗號分隔好幾段章節：
+  「箴言 18:21,4:24,5:3,...」）會把首頁的卡片橫向撐破：`.passage-ref-row` 是
+  flex 容器，裡面的 `.passage-ref` 沒設 `min-width`，flex item 預設
+  `min-width: auto` 不會縮到比內容還窄，長字串就把整排往外撐。修法：
+  `.passage-ref` 加 `min-width: 0` + `overflow-wrap: break-word`、
+  `.passage-ref-row` 加 `flex-wrap: wrap`，`body` 也加 `overflow-x: hidden`
+  當最後一道防線——不管哪個子元素以後又塞了太長的字串，都不會把整個頁面橫向撐開。
+  用 Playwright 實測過長字串版本，`scrollWidth` 跟 viewport 寬度一致，沒有橫向溢位。
+
 ## [Unreleased] - 2026-07-18（晚）
 
 ### 修正：service worker 快取策略改成 stale-while-revalidate，不再依賴手動加版本號

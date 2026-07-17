@@ -29,6 +29,7 @@ body {
   font-family: var(--font-ui);
   color: var(--color-ink);
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden; /* 防呆：不管哪個子元素塞了太長的字串，都不會把整個頁面橫向撐開 */
 }
 
 .frame {
@@ -199,13 +200,17 @@ body {
 
 .passage-ref-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
+  gap: 4px 10px;
   margin: 0 0 12px;
 }
 
 .passage-ref {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow-wrap: break-word;
   font-size: 12px;
   letter-spacing: 1.5px;
   color: var(--color-accent);
@@ -214,6 +219,7 @@ body {
 }
 
 .tap-hint {
+  flex-shrink: 0;
   margin: 0;
   font-size: 11px;
   color: var(--color-muted);
