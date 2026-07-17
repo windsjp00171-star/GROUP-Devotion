@@ -16,6 +16,7 @@ from csrf import csrf_protect, csrf_token
 from data_store import (
     DEFAULT_GUIDING_QUESTION,
     add_my_reflection,
+    delete_reflection,
     export_passage,
     get_member_by_line_id,
     get_passage_by_date,
@@ -166,6 +167,18 @@ def submit_reflection():
     return redirect(url_for("home"))
 
 
+@app.route("/reflections/<reflection_id>/delete", methods=["POST"])
+@admin_required
+def admin_delete_reflection(reflection_id):
+    """輔導移除過激或不當的領受。安靜移除，不公開標記、不通知當事人——
+    這是牧養上的處理，不是公開的懲罰或公審。"""
+    delete_reflection(reflection_id)
+    next_url = request.form.get("next") or ""
+    if next_url.startswith("/"):
+        return redirect(next_url)
+    return redirect(url_for("home"))
+
+
 @app.route("/history")
 @login_required
 def history():
@@ -184,12 +197,16 @@ def history():
     end_date = date(year, month, days_in_month).isoformat()
     scheduled = list_passage_dates(start_date, end_date)
 
+    today_str = today.isoformat()
     leading_blanks = (first_weekday + 1) % 7  # 轉成台灣慣例的星期日排第一欄
     weeks: list[list[dict | None]] = []
     week: list[dict | None] = [None] * leading_blanks
     for day in range(1, days_in_month + 1):
         d = date(year, month, day).isoformat()
-        week.append({"day": day, "date": d, "has_passage": d in scheduled, "is_today": d == today.isoformat()})
+        # 同一個月裡，今天之後的日子就算已經排過經文（例如批次匯入先排了下個月），
+        # 也不能在回顧點進去——回顧是往回看，不是提前偷看還沒發生的排程。
+        has_passage = d in scheduled and d <= today_str
+        week.append({"day": day, "date": d, "has_passage": has_passage, "is_today": d == today_str})
         if len(week) == 7:
             weeks.append(week)
             week = []
@@ -218,6 +235,11 @@ def history_day(passage_date):
     try:
         datetime.strptime(passage_date, "%Y-%m-%d")
     except ValueError:
+        return redirect(url_for("history"))
+
+    # 回顧是往回看，不是提前偷看還沒發生的排程——即使直接打網址帶未來日期也擋掉，
+    # 不能只靠月曆畫面沒有連結這件事（那只是不好按到，不是真的擋住）。
+    if passage_date > local_time.today().isoformat():
         return redirect(url_for("history"))
 
     passage = get_passage_by_date(passage_date)

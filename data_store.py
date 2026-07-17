@@ -419,6 +419,16 @@ def add_my_reflection(passage_id: str, member_id: str, verse_index: int | None, 
     return result.data[0]
 
 
+def delete_reflection(reflection_id: str) -> None:
+    """輔導移除一則領受（過激或不當內容）。安靜移除，不公開標記、不通知當事人——
+    是牧養上的處理，不是公開的懲罰或公審。"""
+    if _demo_mode():
+        global _demo_reflections
+        _demo_reflections = [r for r in _demo_reflections if r["id"] != reflection_id]
+        return
+    sb.table("reflections").delete().eq("id", reflection_id).execute()
+
+
 def export_passage(passage_id: str) -> dict:
     """Rule 14：一鍵匯出這段經文的所有領受。"""
     passage = get_today_passage() if _demo_mode() else _find_passage(passage_id)

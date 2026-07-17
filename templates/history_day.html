@@ -76,6 +76,14 @@
         <p class="feed-item__note feed-item__note--empty">{{ '你' if r.mine else r.name }} 也讀了這段</p>
         {% endif %}
       </div>
+      {% if current_user_is_admin %}
+      <form class="feed-item__remove-form" method="post" action="{{ url_for('admin_delete_reflection', reflection_id=r.id) }}"
+            onsubmit="return confirm('移除這則領受？當事人不會收到通知。');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="next" value="{{ request.path }}">
+        <button type="submit" class="feed-item__remove" aria-label="移除這則領受">×</button>
+      </form>
+      {% endif %}
     </div>
     {% endfor %}
   </section>

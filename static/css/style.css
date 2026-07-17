@@ -615,6 +615,27 @@ body {
   color: var(--color-muted);
 }
 
+.feed-item__remove-form {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.feed-item__remove {
+  border: none;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.feed-item__remove:hover {
+  background: var(--color-bg-screen);
+  color: var(--color-ink-soft);
+}
+
 /* ---------- 小夥伴 ---------- */
 
 .mascot {
