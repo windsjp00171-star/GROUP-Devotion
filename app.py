@@ -68,12 +68,14 @@ def home():
         return render_template("no_passage.html")
 
     my_member_id = _current_member_id()
-    mine = next((r for r in get_reflections(passage["id"], my_member_id) if r["mine"]), None)
+    reflections = get_reflections(passage["id"], my_member_id)
+    mine = next((r for r in reflections if r["mine"]), None)
 
     return render_template(
         "home.html",
         passage=passage,
         verses=list(enumerate(passage["verses"])),
+        reflections=reflections,
         submitted=mine is not None,
     )
 
@@ -96,17 +98,6 @@ def submit_reflection():
     note = (request.form.get("note") or "").strip()
     add_my_reflection(passage["id"], _current_member_id(), verse_index, note)
     return redirect(url_for("home"))
-
-
-@app.route("/collision")
-@login_required
-def collision():
-    passage = get_today_passage()
-    if not passage:
-        return render_template("no_passage.html")
-
-    reflections = get_reflections(passage["id"], _current_member_id())
-    return render_template("collision.html", passage=passage, reflections=reflections)
 
 
 @app.route("/admin", methods=["GET", "POST"])

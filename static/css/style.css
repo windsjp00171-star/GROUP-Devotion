@@ -321,14 +321,6 @@ body.tour-active {
   background: linear-gradient(145deg, #B7D1A0, #7FA06B);
 }
 
-.home-footer {
-  margin-top: auto;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding-top: 10px;
-}
-
 .rule14-link {
   text-align: center;
   font-size: 11px;
@@ -466,67 +458,81 @@ body.tour-active {
   margin-top: 16px;
 }
 
-/* ---------- 碰撞畫面 ---------- */
+/* ---------- 同一段路上（動態牆） ---------- */
 
-.collision-header {
+.feed {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 12px;
+  scroll-margin-top: 20px;
 }
 
-.back-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+.feed-title {
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-label);
+}
+
+.feed-empty {
+  font-size: 13px;
+  color: var(--color-muted);
+  text-align: center;
+  padding: 12px 0;
+}
+
+.feed-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
   background: var(--color-card);
   border: 1px solid var(--color-card-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  text-decoration: none;
+  border-radius: 18px;
+  padding: 14px 16px;
 }
 
-.collision-header h1 {
-  font-size: 16px;
+.feed-item--mine {
+  border-color: var(--color-glow);
+  box-shadow: 0 0 0 3px rgba(239, 194, 107, 0.25);
+}
+
+.feed-item__mark {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.feed-item__body {
+  min-width: 0;
+}
+
+.feed-item__name {
+  margin: 0 0 4px;
+  font-size: 13px;
   font-weight: 700;
-  margin: 0;
   color: var(--color-ink);
 }
 
-.collision-ref {
-  font-size: 12px;
-  color: var(--color-accent);
-  margin: 2px 0 0;
+.feed-item__verse {
+  margin: 0 0 6px;
+  font-family: var(--font-serif);
+  font-size: 14px;
+  color: var(--color-ink-soft);
+  line-height: 1.7;
+  background: #FBF6E9;
+  border-radius: 10px;
+  padding: 8px 10px;
 }
 
-.garden {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 0 4px;
-}
-
-.garden-bed {
-  position: relative;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 10px 14px;
-  max-width: 320px;
-  padding: 20px 24px 14px;
-  border-radius: 50% / 40%;
-  background: radial-gradient(ellipse at center, rgba(143, 176, 122, 0.18), transparent 72%);
-}
-
-.garden-hint {
-  text-align: center;
-  font-size: 12px;
-  color: var(--color-muted);
+.feed-item__note {
   margin: 0;
+  font-size: 14px;
+  color: var(--color-ink);
+  line-height: 1.6;
+}
+
+.feed-item__note--empty {
+  font-size: 13px;
+  color: var(--color-muted);
 }
 
 /* ---------- 小夥伴 ---------- */
@@ -538,7 +544,6 @@ body.tour-active {
 }
 
 .mascot--small { width: 56px; height: 56px; }
-.mascot--big { width: 120px; height: 120px; }
 
 .mascot__ear {
   position: absolute;
@@ -548,9 +553,6 @@ body.tour-active {
 .mascot--small .mascot__ear { width: 10px; height: 10px; top: -2px; }
 .mascot--small .mascot__ear--l { left: 14px; }
 .mascot--small .mascot__ear--r { left: 32px; }
-.mascot--big .mascot__ear { width: 18px; height: 18px; top: -4px; }
-.mascot--big .mascot__ear--l { left: 28px; }
-.mascot--big .mascot__ear--r { left: 70px; }
 
 .mascot__face {
   position: absolute;
@@ -558,7 +560,6 @@ body.tour-active {
   background: radial-gradient(circle at 35% 30%, #FBE7D2, #F3D0AC);
 }
 .mascot--small .mascot__face { inset: 6px 4px 4px 4px; box-shadow: inset -4px -6px 10px rgba(0, 0, 0, 0.05); }
-.mascot--big .mascot__face { inset: 12px 8px 8px 8px; box-shadow: inset -8px -12px 18px rgba(0, 0, 0, 0.06); }
 
 .mascot__eye {
   position: absolute;
@@ -568,9 +569,6 @@ body.tour-active {
 .mascot--small .mascot__eye { width: 4px; height: 5px; top: 26px; }
 .mascot--small .mascot__eye--l { left: 18px; }
 .mascot--small .mascot__eye--r { left: 30px; }
-.mascot--big .mascot__eye { width: 8px; height: 10px; top: 54px; }
-.mascot--big .mascot__eye--l { left: 38px; }
-.mascot--big .mascot__eye--r { left: 68px; }
 
 .mascot__cheek {
   position: absolute;
@@ -581,9 +579,6 @@ body.tour-active {
 .mascot--small .mascot__cheek { width: 7px; height: 4px; top: 31px; }
 .mascot--small .mascot__cheek--l { left: 11px; }
 .mascot--small .mascot__cheek--r { left: 35px; }
-.mascot--big .mascot__cheek { width: 14px; height: 8px; top: 64px; }
-.mascot--big .mascot__cheek--l { left: 20px; }
-.mascot--big .mascot__cheek--r { left: 78px; }
 
 /* ---------- 領受記號：花／果／蝶／石 ---------- */
 
@@ -596,13 +591,6 @@ body.tour-active {
   background: none;
   padding: 0;
   cursor: pointer;
-}
-
-.mark--tiny { width: 20px; height: 20px; }
-
-.mark--bloom {
-  animation: bloomIn 0.6s ease;
-  filter: drop-shadow(0 0 6px var(--color-glow));
 }
 
 /* 花 */
@@ -690,98 +678,7 @@ body.tour-active {
   left: 5px;
 }
 
-/* ---------- 領受卡（底部彈出） ---------- */
-
-.reveal-card {
-  position: fixed;
-  left: 50%;
-  bottom: 0;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 480px;
-  background: var(--color-card);
-  border-radius: 26px 26px 0 0;
-  border-top: 1px solid var(--color-card-border);
-  padding: 20px 22px 28px;
-  box-shadow: 0 -12px 30px rgba(73, 61, 46, 0.12);
-  z-index: 30;
-}
-
-.reveal-card__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.reveal-card__who {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.reveal-card__avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: linear-gradient(145deg, #F0C892, #E2916A);
-  color: #fff;
-  font-size: 14px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.reveal-card__name {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--color-ink);
-}
-
-.reveal-card__close {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: #F3EEDF;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  color: var(--color-label);
-  cursor: pointer;
-}
-
-.reveal-card__verse {
-  margin: 12px 0 0;
-  font-family: var(--font-serif);
-  font-size: 15px;
-  color: var(--color-ink-soft);
-  line-height: 1.7;
-  background: #FBF6E9;
-  border-radius: 14px;
-  padding: 12px 14px;
-}
-
-.reveal-card__note {
-  margin: 10px 0 0;
-  font-size: 14px;
-  color: var(--color-ink);
-  line-height: 1.7;
-}
-
-.reveal-card__note--empty {
-  font-size: 13px;
-  color: var(--color-muted);
-}
-
 /* ---------- 動畫 ---------- */
-
-@keyframes bloomIn {
-  0% { transform: scale(0.2); opacity: 0; }
-  60% { transform: scale(1.15); opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
-}
 
 @keyframes gentleBob {
   0%, 100% { transform: translateY(0); }

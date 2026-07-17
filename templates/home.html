@@ -37,37 +37,62 @@
       <button type="submit" class="btn btn--ghost"
               data-tour-step="4" data-tour-text="只是讀過，也可以按這個，不用特別寫字或標記哪一句。">我也讀了</button>
     </form>
-    <a class="btn btn--ghost" href="{{ url_for('collision') }}"
-       data-tour-step="5" data-tour-text="還沒想好要不要寫？也可以先看看大家怎麼讀這段。">先看看大家怎麼讀（不寫也可以）</a>
+    <a class="btn btn--ghost" href="#feed"
+       data-tour-step="5" data-tour-text="還沒想好要不要寫？往下滑就能看到大家怎麼讀這段。">先看看大家怎麼讀（不寫也可以）</a>
     {% else %}
     <div class="submitted-banner">
       <span class="seed-dot" aria-hidden="true"></span>
       <p>種子留下了，謝謝你今天也在這裡</p>
     </div>
-    <a class="btn btn--ghost" href="{{ url_for('collision') }}">看看大家怎麼讀這段 →</a>
+    <a class="btn btn--ghost" href="#feed">看看大家怎麼讀這段 ↓</a>
     {% endif %}
   </section>
 
-  <footer class="home-footer">
-    <div class="mascot mascot--small" aria-hidden="true">
-      <span class="mascot__ear mascot__ear--l"></span>
-      <span class="mascot__ear mascot__ear--r"></span>
-      <span class="mascot__face"></span>
-      <span class="mascot__eye mascot__eye--l"></span>
-      <span class="mascot__eye mascot__eye--r"></span>
-      <span class="mascot__cheek mascot__cheek--l"></span>
-      <span class="mascot__cheek mascot__cheek--r"></span>
-    </div>
-    {% if submitted %}
-    <span class="mark mark--flower mark--tiny mark--bloom" style="--mark-color:#EFC26B" aria-hidden="true">
-      <span class="mark__petal mark__petal--t"></span>
-      <span class="mark__petal mark__petal--b"></span>
-      <span class="mark__petal mark__petal--l"></span>
-      <span class="mark__petal mark__petal--r"></span>
-      <span class="mark__center"></span>
-    </span>
+  <section class="feed" id="feed" data-tour-step="6" data-tour-text="這裡是小組每個人在這段經文停下的地方，不用點開，直接看得到。">
+    <p class="feed-title">同一段路上</p>
+
+    {% if not reflections %}
+    <p class="feed-empty">還沒有人留下什麼，你可以是第一個。</p>
     {% endif %}
-  </footer>
+
+    {% for r in reflections %}
+    <div class="feed-item{{ ' feed-item--mine' if r.mine else '' }}"
+         {% if loop.first %}data-tour-step="7" data-tour-text="每一則都是小組裡真的有人在這段經文停下的地方。"{% endif %}>
+      <span class="feed-item__mark mark mark--{{ r.kind }}" style="--mark-color:{{ r.color }}" aria-hidden="true">
+        {% if r.kind == 'flower' %}
+          <span class="mark__petal mark__petal--t"></span>
+          <span class="mark__petal mark__petal--b"></span>
+          <span class="mark__petal mark__petal--l"></span>
+          <span class="mark__petal mark__petal--r"></span>
+          <span class="mark__center"></span>
+        {% elif r.kind == 'fruit' %}
+          <span class="mark__stem"></span>
+          <span class="mark__body"></span>
+        {% elif r.kind == 'butterfly' %}
+          <span class="mark__wing mark__wing--l"></span>
+          <span class="mark__wing mark__wing--r"></span>
+          <span class="mark__antenna"></span>
+        {% elif r.kind == 'stone' %}
+          <span class="mark__rock"></span>
+          <span class="mark__shine"></span>
+        {% endif %}
+      </span>
+      <div class="feed-item__body">
+        <p class="feed-item__name">{{ '你' if r.mine else r.name }}</p>
+        {% if r.verse_index is not none %}
+        <p class="feed-item__verse">「{{ passage.verses[r.verse_index] }}」</p>
+        {% endif %}
+        {% if r.note and r.note.strip() %}
+        <p class="feed-item__note">{{ r.note }}</p>
+        {% elif r.verse_index is not none %}
+        <p class="feed-item__note feed-item__note--empty">{{ '你' if r.mine else r.name }} 也在這句停下了腳步，沒有多寫什麼</p>
+        {% else %}
+        <p class="feed-item__note feed-item__note--empty">{{ '你' if r.mine else r.name }} 也讀了這段</p>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </section>
 
   {% if bible_actionbook_url %}
   <p class="rule14-link">
