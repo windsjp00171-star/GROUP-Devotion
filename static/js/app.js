@@ -33,6 +33,8 @@ function initVerseMarking() {
         hintText.textContent = verse.textContent.trim();
         hint.hidden = false;
       }
+      // 手機上點擊回饋容易被忽略，有支援的話震一下加強「有點到」的感覺。
+      if (navigator.vibrate) navigator.vibrate(12);
     });
   });
 

@@ -11,10 +11,13 @@
   </header>
 
   <section class="passage-card">
-    <p class="passage-ref">{{ passage.reference }}</p>
+    <div class="passage-ref-row">
+      <p class="passage-ref">{{ passage.reference }}</p>
+      <p class="tap-hint" aria-hidden="true">👆 輕點想停下的那一句</p>
+    </div>
 
     <div class="passage-text" id="passage-text"
-         data-tour-step="1" data-tour-text="每天這裡會出現同一段經文，小組一起讀。">
+         data-tour-step="1" data-tour-text="每天這裡會出現同一段經文，小組一起讀，輕點其中一句可以標記起來。">
       {% for index, verse in verses %}
       <p class="verse" data-verse-index="{{ index }}">{{ verse }}</p>
       {% endfor %}

@@ -197,30 +197,69 @@ body {
   box-shadow: 0 8px 24px rgba(73, 61, 46, 0.06);
 }
 
+.passage-ref-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 12px;
+}
+
 .passage-ref {
   font-size: 12px;
   letter-spacing: 1.5px;
   color: var(--color-accent);
   font-weight: 600;
-  margin: 0 0 12px;
+  margin: 0;
+}
+
+.tap-hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--color-muted);
+  white-space: nowrap;
 }
 
 .verse {
+  position: relative;
   font-family: var(--font-serif);
   font-size: 17px;
-  line-height: 1.95;
+  line-height: 2.1;
   color: var(--color-ink);
-  padding: 2px 6px;
+  padding: 3px 10px 3px 8px;
   border-radius: 8px;
   cursor: pointer;
-  margin: 0;
+  margin: 0 0 2px;
   background: transparent;
-  transition: background 0.25s ease, box-shadow 0.25s ease;
+  border-bottom: 1px dashed var(--color-card-border);
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+}
+
+.verse:active {
+  background: var(--color-highlight);
+  transform: scale(0.99);
 }
 
 .verse--marked {
   background: var(--color-highlight);
   box-shadow: 0 0 0 4px var(--color-highlight);
+  border-bottom-color: transparent;
+  font-weight: 500;
+  animation: verseMarkPop 0.25s ease;
+}
+
+.verse--marked::before {
+  content: '🌼';
+  position: absolute;
+  left: -18px;
+  font-size: 13px;
+}
+
+@keyframes verseMarkPop {
+  0% { transform: scale(0.97); }
+  60% { transform: scale(1.015); }
+  100% { transform: scale(1); }
 }
 
 .prompt {
