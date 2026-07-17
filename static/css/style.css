@@ -84,32 +84,30 @@ body {
 
 /* ---------- 聚焦式導覽 ---------- */
 
-body.tour-active {
-  overflow: hidden;
-}
-
 .tour-overlay {
   position: fixed;
   inset: 0;
   z-index: 200;
+  /* 不設 overflow:hidden 鎖 body——導覽要用 scrollIntoView 把頁面捲到
+     每一步的目標，鎖住 overflow 會連程式捲動一起擋掉。 */
 }
 
 .tour-spotlight {
-  position: absolute;
+  position: fixed;
   border-radius: 16px;
   box-shadow: 0 0 0 9999px rgba(73, 61, 46, 0.6);
-  transition: top 0.3s ease, left 0.3s ease, width 0.3s ease, height 0.3s ease;
+  transition: top 0.15s ease, left 0.15s ease, width 0.15s ease, height 0.15s ease;
   pointer-events: none;
 }
 
 .tour-callout {
-  position: absolute;
+  position: fixed;
   width: min(280px, calc(100vw - 40px));
   background: var(--color-card);
   border-radius: 16px;
   padding: 14px 16px;
   box-shadow: 0 8px 24px rgba(73, 61, 46, 0.25);
-  transition: top 0.3s ease, left 0.3s ease;
+  transition: top 0.15s ease, left 0.15s ease, bottom 0.15s ease;
 }
 
 .tour-callout__text {

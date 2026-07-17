@@ -39,21 +39,60 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let index = 0;
 
+  // 頁面現在比較長，捲到很下面的步驟需要的捲動時間比較久，用固定延遲會抓到
+  // 捲動途中的座標。改成輪詢 scrollY，連續幾個影格沒再變動才視為捲動完成。
+  function waitForScrollSettle(callback) {
+    let lastY = window.scrollY;
+    let stableFrames = 0;
+    let totalFrames = 0;
+
+    function check() {
+      totalFrames += 1;
+      const currentY = window.scrollY;
+      if (Math.abs(currentY - lastY) < 1) {
+        stableFrames += 1;
+      } else {
+        stableFrames = 0;
+      }
+      lastY = currentY;
+
+      if (stableFrames >= 4 || totalFrames > 120) {
+        callback();
+        return;
+      }
+      requestAnimationFrame(check);
+    }
+
+    requestAnimationFrame(check);
+  }
+
+  // spotlight／callout 都用 position: fixed（相對視窗，不是相對頁面），
+  // 所以量位置直接用 getBoundingClientRect() 就好，不用再加 scrollY/scrollX。
   function positionOn(el) {
     const rect = el.getBoundingClientRect();
     const pad = 8;
-    spotlight.style.top = `${rect.top - pad + window.scrollY}px`;
-    spotlight.style.left = `${rect.left - pad + window.scrollX}px`;
+    spotlight.style.top = `${rect.top - pad}px`;
+    spotlight.style.left = `${rect.left - pad}px`;
     spotlight.style.width = `${rect.width + pad * 2}px`;
     spotlight.style.height = `${rect.height + pad * 2}px`;
 
     const viewportWidth = document.documentElement.clientWidth;
+    const viewportHeight = document.documentElement.clientHeight;
     const calloutWidth = Math.min(280, viewportWidth - 40);
-    let left = rect.left + window.scrollX;
-    left = Math.max(16, Math.min(left, viewportWidth - calloutWidth - 16));
+    const left = Math.max(16, Math.min(rect.left, viewportWidth - calloutWidth - 16));
 
-    callout.style.top = `${rect.bottom + window.scrollY + 16}px`;
+    // 目標在畫面下半部就把說明卡放在它上面，不然卡片可能被擠出畫面外。
+    const spaceBelow = viewportHeight - rect.bottom;
+    const calloutOnTop = spaceBelow < 160;
+
     callout.style.left = `${left}px`;
+    if (calloutOnTop) {
+      callout.style.top = 'auto';
+      callout.style.bottom = `${viewportHeight - rect.top + 16}px`;
+    } else {
+      callout.style.bottom = 'auto';
+      callout.style.top = `${rect.bottom + 16}px`;
+    }
   }
 
   function renderDots() {
@@ -65,12 +104,12 @@ document.addEventListener('DOMContentLoaded', () => {
   function showStep(i) {
     index = i;
     const el = steps[index];
-    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
     textEl.textContent = el.dataset.tourText || '';
     nextBtn.textContent = index === steps.length - 1 ? '知道了' : '下一步';
     renderDots();
-    // 等捲動穩定再量位置，不然抓到的是捲動前的座標。
-    requestAnimationFrame(() => requestAnimationFrame(() => positionOn(el)));
+
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    waitForScrollSettle(() => positionOn(el));
   }
 
   function start() {

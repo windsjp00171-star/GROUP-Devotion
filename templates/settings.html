@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}你的暱稱{% endblock %}
+
+{% block content %}
+<div class="screen">
+
+  <header class="home-header">
+    <h1>你的暱稱</h1>
+  </header>
+
+  {% if saved %}
+  <div class="submitted-banner">
+    <span class="seed-dot" aria-hidden="true"></span>
+    <p>存好了</p>
+  </div>
+  {% endif %}
+
+  <section class="passage-card">
+    <form class="admin-form" method="post" action="{{ url_for('settings') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label class="admin-label" for="nickname">大家會看到的名字</label>
+      <input class="admin-input" type="text" id="nickname" name="nickname"
+             placeholder="{{ member.display_name or '你的名字' }}"
+             value="{{ member.nickname or '' }}">
+      <p class="admin-hint">不是本名也可以，留空的話會顯示你 LINE 的名字「{{ member.display_name }}」。</p>
+      <button type="submit" class="btn btn--primary">儲存</button>
+    </form>
+  </section>
+
+  <a class="link-quiet" href="{{ url_for('home') }}">回到今天這段</a>
+
+</div>
+{% endblock %}

@@ -21,6 +21,7 @@ from data_store import (
     import_passages,
     list_members,
     set_member_leader,
+    set_nickname,
     set_passage_for_date,
     set_today_passage,
 )
@@ -58,6 +59,18 @@ def _current_member_id():
 def healthz():
     """部署平台的健康檢查用，刻意不用登入，不碰資料庫。"""
     return "ok"
+
+
+@app.route("/settings", methods=["GET", "POST"])
+@login_required
+def settings():
+    if request.method == "POST":
+        nickname = (request.form.get("nickname") or "").strip()
+        set_nickname(_current_member_id(), nickname)
+        return redirect(url_for("settings", saved=1))
+
+    member = get_member_by_line_id(get_user()["line_user_id"]) or {}
+    return render_template("settings.html", member=member, saved=request.args.get("saved") == "1")
 
 
 @app.route("/")

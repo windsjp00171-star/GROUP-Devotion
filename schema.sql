@@ -19,6 +19,9 @@ create table if not exists members (
   line_user_id text not null unique,
   display_name text not null default '',
   picture_url text,
+  -- 自己設定的暱稱，留空就顯示 LINE 的 display_name。
+  -- 不是本名也可以，讓還沒準備好用真名分享的人多一個選擇。
+  nickname text,
   -- 輔導：可以進 /admin 排經文。ADMIN_LINE_USER_IDS 環境變數設定的是
   -- 永久管理員，不受這個欄位影響；這個欄位是「後台可以指定誰是輔導」
   -- 那種可以隨時開關的一般輔導。

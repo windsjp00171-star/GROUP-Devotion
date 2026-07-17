@@ -163,6 +163,19 @@ def set_member_leader(member_id: str, is_leader: bool) -> None:
     sb.table("members").update({"is_leader": is_leader}).eq("id", member_id).execute()
 
 
+def set_nickname(member_id: str, nickname: str) -> None:
+    """設定自己的暱稱，不是本名也可以。留空（傳空字串）就退回顯示 LINE 的名字。"""
+    if _demo_mode():
+        return
+    sb.table("members").update({"nickname": nickname or None}).eq("id", member_id).execute()
+
+
+def _display_name(member_row: dict | None) -> str:
+    if not member_row:
+        return "小夥伴"
+    return member_row.get("nickname") or member_row.get("display_name") or "小夥伴"
+
+
 # ---------- 今天這段經文 ----------
 
 
@@ -297,7 +310,7 @@ def get_reflections(passage_id: str, my_member_id: str | None = None) -> list[di
     else:
         result = (
             sb.table("reflections")
-            .select("*, members(display_name)")
+            .select("*, members(display_name, nickname)")
             .eq("passage_id", passage_id)
             .order("created_at")
             .execute()
@@ -306,7 +319,7 @@ def get_reflections(passage_id: str, my_member_id: str | None = None) -> list[di
             {
                 "id": r["id"],
                 "member_id": r["member_id"],
-                "name": (r.get("members") or {}).get("display_name") or "小夥伴",
+                "name": _display_name(r.get("members")),
                 "verse_index": r["verse_index"],
                 "note": r["note"],
                 "kind": r["kind"],
