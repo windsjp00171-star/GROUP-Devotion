@@ -236,6 +236,40 @@ body {
   color: var(--color-muted);
 }
 
+.selected-verse {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--color-highlight);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-ink-soft);
+}
+
+.selected-verse__label {
+  flex-shrink: 0;
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
+.selected-verse__text {
+  flex: 1;
+}
+
+.selected-verse__clear {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--color-muted);
+  cursor: pointer;
+  padding: 0 2px;
+}
+
 .reflection-form textarea {
   width: 100%;
   margin-top: 12px;

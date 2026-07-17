@@ -27,7 +27,12 @@
     <form class="reflection-form" method="post" action="{{ url_for('submit_reflection') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="verse_index" id="verse-index-input" value="">
-      <textarea name="note" placeholder="想多寫一點點也可以…（不寫也沒關係）"></textarea>
+      <p class="selected-verse" id="selected-verse" hidden>
+        <span class="selected-verse__label">針對這句</span>
+        <span class="selected-verse__text" id="selected-verse-text"></span>
+        <button type="button" class="selected-verse__clear" id="selected-verse-clear" aria-label="取消標記這一句">×</button>
+      </p>
+      <textarea name="note" placeholder="想多寫一點點也可以…"></textarea>
       <button type="submit" class="btn btn--primary"
               data-tour-step="3" data-tour-text="想留一句就寫，不想寫也可以直接送出，空白也算數。">留下我的領受</button>
     </form>
@@ -38,7 +43,7 @@
               data-tour-step="4" data-tour-text="只是讀過，也可以按這個，不用特別寫字或標記哪一句。">我也讀了</button>
     </form>
     <a class="btn btn--ghost" href="#feed"
-       data-tour-step="5" data-tour-text="還沒想好要不要寫？往下滑就能看到大家怎麼讀這段。">先看看大家怎麼讀（不寫也可以）</a>
+       data-tour-step="5" data-tour-text="還沒想好要不要寫？往下滑就能看到大家怎麼讀這段。">先看看大家怎麼讀</a>
     {% else %}
     <div class="submitted-banner">
       <span class="seed-dot" aria-hidden="true"></span>

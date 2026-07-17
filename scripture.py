@@ -54,6 +54,27 @@ def _segment(book_data: dict, sc: int, sv: int, ec: int, ev: int) -> List[str]:
     return verses
 
 
+def resolve_book_chapter(reference: str) -> Tuple[str, int] | None:
+    """把「路加福音 24:13-17」這種 reference 拆成 (書卷, 起始章)。
+
+    用「reference 是否以某個已知書卷開頭」來配對，不是單純 split(' ')——
+    手動貼經文那條路（/admin 手動表單）的 reference 是輔導自己打的自由格式，
+    不一定照著「書卷 章:節」排版，配不上已知書卷就回 None，呼叫端自己決定退回哪裡。
+    """
+    reference = (reference or "").strip()
+    if not reference:
+        return None
+    for book in sorted(BOOK_NAMES, key=len, reverse=True):
+        if reference.startswith(book):
+            rest = reference[len(book):].strip()
+            chapter_part = rest.split(":", 1)[0].split("-", 1)[0].strip()
+            try:
+                return book, int(chapter_part)
+            except ValueError:
+                return None
+    return None
+
+
 def get_scripture(book: str, rng: str) -> List[str]:
     """回傳一段話的逐句陣列（不含章節數字，接我們畫面上一句一行的樣子）。
 

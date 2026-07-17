@@ -26,7 +26,7 @@ from data_store import (
     set_today_passage,
 )
 from plan_import import parse_plan_file
-from scripture import BOOK_NAMES, get_scripture
+from scripture import BOOK_NAMES, get_scripture, resolve_book_chapter
 
 load_dotenv()
 
@@ -46,6 +46,18 @@ def inject_globals():
         "bible_actionbook_url": BIBLE_ACTIONBOOK_URL,
         "csrf_token": csrf_token,
     }
+
+
+def _actionbook_deep_link(reference: str) -> str:
+    """深度閱讀連結：能配出書卷＋章的話，直接跳到 bible-actionbook 那一章，
+    不然退回它的首頁自己選書（例如手動貼經文那條路，reference 是自由格式）。"""
+    if not BIBLE_ACTIONBOOK_URL:
+        return ""
+    resolved = resolve_book_chapter(reference)
+    if not resolved:
+        return BIBLE_ACTIONBOOK_URL
+    book, chapter = resolved
+    return f"{BIBLE_ACTIONBOOK_URL.rstrip('/')}/read/{book}/{chapter}"
 
 
 def _current_member_id():
@@ -105,6 +117,7 @@ def home():
         verses=list(enumerate(passage["verses"])),
         reflections=reflections,
         submitted=mine is not None,
+        bible_actionbook_url=_actionbook_deep_link(passage["reference"]),
     )
 
 

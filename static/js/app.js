@@ -11,13 +11,34 @@ function initVerseMarking() {
   const input = document.getElementById('verse-index-input');
   if (!verses.length || !input) return;
 
+  const hint = document.getElementById('selected-verse');
+  const hintText = document.getElementById('selected-verse-text');
+  const clearBtn = document.getElementById('selected-verse-clear');
+
+  function clearMark() {
+    verses.forEach((v) => v.classList.remove('verse--marked'));
+    input.value = '';
+    if (hint) hint.hidden = true;
+  }
+
   verses.forEach((verse) => {
     verse.addEventListener('click', () => {
-      verses.forEach((v) => v.classList.remove('verse--marked'));
+      const alreadyMarked = verse.classList.contains('verse--marked');
+      clearMark();
+      if (alreadyMarked) return; // 再點一次同一句：取消標記，回到「沒有針對哪一句」
+
       verse.classList.add('verse--marked');
       input.value = verse.dataset.verseIndex;
+      if (hint && hintText) {
+        hintText.textContent = verse.textContent.trim();
+        hint.hidden = false;
+      }
     });
   });
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', clearMark);
+  }
 }
 
 function initSubmitFeedback() {
