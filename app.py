@@ -6,7 +6,7 @@ import json
 
 import openpyxl
 from dotenv import load_dotenv
-from flask import Flask, Response, redirect, render_template, request, url_for
+from flask import Flask, Response, redirect, render_template, request, send_from_directory, url_for
 
 import ai_guide
 import local_time
@@ -59,6 +59,21 @@ def _current_member_id():
 def healthz():
     """部署平台的健康檢查用，刻意不用登入，不碰資料庫。"""
     return "ok"
+
+
+@app.route("/offline")
+def offline():
+    """PWA 離線時 service worker 顯示的頁面，不用登入（離線時也不可能驗證）。"""
+    return render_template("offline.html")
+
+
+@app.route("/sw.js")
+def service_worker():
+    """Service worker 一定要從網站根目錄的路徑提供，不能放在 /static/ 底下——
+    瀏覽器預設把 SW 的控制範圍（scope）限制在它所在的資料夾，放在 /static/sw.js
+    的話 scope 會變成 /static/，永遠管不到 / 這些真正的頁面，等於整個白做。
+    """
+    return send_from_directory("static", "sw.js", mimetype="application/javascript")
 
 
 @app.route("/settings", methods=["GET", "POST"])
@@ -277,4 +292,7 @@ def handle_server_error(exc):
 
 
 if __name__ == "__main__":
-    app.run(debug=os.environ.get("FLASK_DEBUG", "").strip() == "1")
+    # threaded=True：本機測試時瀏覽器會同時打好幾個請求（頁面＋CSS＋JS＋
+    # service worker），Werkzeug 預設單執行緒會擋到偶爾連線被重置。
+    # 正式站是 gunicorn 在跑，不受這個影響，這裡只是讓本機測試穩定一點。
+    app.run(debug=os.environ.get("FLASK_DEBUG", "").strip() == "1", threaded=True)
