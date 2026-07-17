@@ -34,8 +34,8 @@
     <form method="post" action="{{ url_for('submit_reflection') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="read_only" value="1">
-      <button type="submit" class="link-btn"
-              data-tour-step="4" data-tour-text="只是讀過，也可以按這個，不用特別寫字或標記哪一句。">我也讀了（沒有特別想寫的也可以）</button>
+      <button type="submit" class="btn btn--ghost"
+              data-tour-step="4" data-tour-text="只是讀過，也可以按這個，不用特別寫字或標記哪一句。">我也讀了</button>
     </form>
     <a class="link-quiet" href="{{ url_for('collision') }}"
        data-tour-step="5" data-tour-text="還沒想好要不要寫？也可以先看看大家怎麼讀這段。">先看看大家怎麼讀（不寫也可以）</a>

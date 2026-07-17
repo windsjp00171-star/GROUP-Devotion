@@ -279,6 +279,7 @@ body.tour-active {
 }
 
 .btn--ghost {
+  margin-top: 10px;
   background: var(--color-card);
   border: 1px solid #DCCE9E;
   color: #8A6D3B;
@@ -295,21 +296,6 @@ body.tour-active {
   text-underline-offset: 3px;
   cursor: pointer;
   padding: 4px 0 8px;
-}
-
-.link-btn {
-  display: block;
-  width: 100%;
-  text-align: center;
-  font-size: 13px;
-  color: var(--color-accent);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
-  padding: 4px 0 8px;
-  background: none;
-  border: none;
-  font-family: var(--font-ui);
 }
 
 .submitted-banner {
