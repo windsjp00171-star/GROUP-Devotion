@@ -1,6 +1,9 @@
-// 改 /static/ 底下任何檔案都要記得把這個版本號往上加一，
-// 不然舊版會被下面的 cache-first 策略永久卡住，使用者裝置永遠抓不到新檔案。
-const CACHE_VERSION = 'v2';
+// 這個版本號只影響「整批清掉重建」，不是檔案新不新的唯一依據——下面的
+// static asset 策略是 stale-while-revalidate（先回快取，同時在背景重新
+// 打一次網路更新快取），忘記把版本號往上加也只會晚一次載入才拿到新檔案，
+// 不會像純 cache-first 那樣永久卡住（這件事已經因為忘記加版本號發生過
+// 兩次事故，改成這個策略是為了不要再依賴「記得手動加版本號」這件事）。
+const CACHE_VERSION = 'v3';
 const STATIC_CACHE = 'static-' + CACHE_VERSION;
 const OFFLINE_URL = '/offline';
 const PRECACHE_ASSETS = [
@@ -51,17 +54,21 @@ self.addEventListener('fetch', (event) => {
   if (isNetworkOnly(url)) return;
 
   if (isStaticAsset(url) || isGoogleFont(url)) {
+    // stale-while-revalidate：有快取先立刻回應（快、離線也能用），同時
+    // 在背景重新打網路更新快取——這次沒趕上，下一次載入就會是新的，
+    // 不必靠手動加版本號才能讓使用者拿到新檔案。
     event.respondWith(
-      caches.match(request).then((cached) => {
-        if (cached) return cached;
-        return fetch(request).then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(STATIC_CACHE).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        });
-      })
+      caches.open(STATIC_CACHE).then((cache) =>
+        cache.match(request).then((cached) => {
+          const network = fetch(request)
+            .then((response) => {
+              if (response.ok) cache.put(request, response.clone());
+              return response;
+            })
+            .catch(() => cached);
+          return cached || network;
+        })
+      )
     );
     return;
   }
