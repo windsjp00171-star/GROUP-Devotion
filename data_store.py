@@ -300,6 +300,51 @@ def import_passages(rows: list[dict], leader_member_id: str) -> tuple[int, list[
         return 0, [f"批次寫入資料庫失敗：{exc}"]
 
 
+# ---------- 回顧（往回看排過的日子，不是往前排） ----------
+
+
+def list_passage_dates(start_date: str, end_date: str) -> set[str]:
+    """某個日期範圍內，小組排過經文的日期，畫回顧月曆用——知道哪幾天可以點進去。"""
+    if _demo_mode():
+        if not _demo_passage:
+            return set()
+        d = _demo_passage.get("passage_date") or local_time.today().isoformat()
+        return {d} if start_date <= d <= end_date else set()
+
+    group = get_or_create_default_group()
+    result = (
+        sb.table("daily_passages")
+        .select("passage_date")
+        .eq("group_id", group["id"])
+        .gte("passage_date", start_date)
+        .lte("passage_date", end_date)
+        .execute()
+    )
+    return {row["passage_date"] for row in result.data}
+
+
+def get_passage_by_date(passage_date: str) -> dict | None:
+    """回顧用：拿某一天排定的經文（不限今天），沒排過就回 None。
+    故意不呼叫 AI 補引導問題——回顧是隨手往回翻，不該在瀏覽當下才觸發生成。
+    """
+    if _demo_mode():
+        if not _demo_passage:
+            return None
+        d = _demo_passage.get("passage_date") or local_time.today().isoformat()
+        return _demo_passage if d == passage_date else None
+
+    group = get_or_create_default_group()
+    result = (
+        sb.table("daily_passages")
+        .select("*")
+        .eq("group_id", group["id"])
+        .eq("passage_date", passage_date)
+        .limit(1)
+        .execute()
+    )
+    return result.data[0] if result.data else None
+
+
 # ---------- 領受 ----------
 
 

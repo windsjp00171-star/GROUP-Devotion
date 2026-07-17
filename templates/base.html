@@ -27,6 +27,7 @@
       {% if current_user_is_admin %}
       <a class="logout-link" href="{{ url_for('admin') }}">後台</a>
       {% endif %}
+      <a class="logout-link" href="{{ url_for('history') }}">回顧</a>
       <a class="logout-link" href="{{ url_for('settings') }}">暱稱</a>
       <a class="logout-link" href="{{ url_for('auth.logout') }}">登出</a>
     </div>

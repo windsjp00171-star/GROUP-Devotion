@@ -1,5 +1,6 @@
 import os
-from datetime import datetime
+from calendar import monthrange
+from datetime import date, datetime
 import csv
 import io
 import json
@@ -13,13 +14,16 @@ import local_time
 from auth import auth_bp, admin_required, get_user, is_admin, is_env_admin, login_required, require_login
 from csrf import csrf_protect, csrf_token
 from data_store import (
+    DEFAULT_GUIDING_QUESTION,
     add_my_reflection,
     export_passage,
     get_member_by_line_id,
+    get_passage_by_date,
     get_reflections,
     get_today_passage,
     import_passages,
     list_members,
+    list_passage_dates,
     set_member_leader,
     set_nickname,
     set_passage_for_date,
@@ -139,6 +143,78 @@ def submit_reflection():
     note = (request.form.get("note") or "").strip()
     add_my_reflection(passage["id"], _current_member_id(), verse_index, note)
     return redirect(url_for("home"))
+
+
+@app.route("/history")
+@login_required
+def history():
+    """回顧：往回翻小組排過的日子，不是完成率月曆——格子只用來導覽，
+    不會標記「你今天有沒有寫」，每個人看到的每一格意義都一樣。"""
+    today = local_time.today()
+    year = request.args.get("year", type=int) or today.year
+    month = request.args.get("month", type=int) or today.month
+
+    # 不能滑到「今天所在月份」之後——回顧是往回看，還沒發生的排程不該在這裡看到。
+    if (year, month) > (today.year, today.month):
+        year, month = today.year, today.month
+
+    first_weekday, days_in_month = monthrange(year, month)  # monthrange: 星期一 = 0
+    start_date = date(year, month, 1).isoformat()
+    end_date = date(year, month, days_in_month).isoformat()
+    scheduled = list_passage_dates(start_date, end_date)
+
+    leading_blanks = (first_weekday + 1) % 7  # 轉成台灣慣例的星期日排第一欄
+    weeks: list[list[dict | None]] = []
+    week: list[dict | None] = [None] * leading_blanks
+    for day in range(1, days_in_month + 1):
+        d = date(year, month, day).isoformat()
+        week.append({"day": day, "date": d, "has_passage": d in scheduled, "is_today": d == today.isoformat()})
+        if len(week) == 7:
+            weeks.append(week)
+            week = []
+    if week:
+        weeks.append(week + [None] * (7 - len(week)))
+
+    prev_year, prev_month = (year - 1, 12) if month == 1 else (year, month - 1)
+    next_year, next_month = (year + 1, 1) if month == 12 else (year, month + 1)
+
+    return render_template(
+        "history.html",
+        year=year,
+        month=month,
+        weeks=weeks,
+        prev_year=prev_year,
+        prev_month=prev_month,
+        next_year=next_year,
+        next_month=next_month,
+        has_next=(year, month) < (today.year, today.month),
+    )
+
+
+@app.route("/history/<passage_date>")
+@login_required
+def history_day(passage_date):
+    try:
+        datetime.strptime(passage_date, "%Y-%m-%d")
+    except ValueError:
+        return redirect(url_for("history"))
+
+    passage = get_passage_by_date(passage_date)
+    if not passage:
+        return redirect(url_for("history"))
+    passage = dict(passage)
+    passage["guiding_question"] = passage.get("guiding_question") or DEFAULT_GUIDING_QUESTION
+
+    reflections = get_reflections(passage["id"], _current_member_id())
+
+    return render_template(
+        "history_day.html",
+        passage=passage,
+        passage_date=passage_date,
+        verses=list(enumerate(passage["verses"])),
+        reflections=reflections,
+        bible_actionbook_url=_actionbook_deep_link(passage["reference"]),
+    )
 
 
 @app.route("/admin", methods=["GET", "POST"])

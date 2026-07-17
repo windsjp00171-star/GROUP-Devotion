@@ -55,8 +55,9 @@ static/sw.js               Service worker（用 /sw.js 這個路由提供，見 
   - 手動貼經文（沒有這卷書，或想自己改字句時的備案）
   - 引導問題留空會用 AI 生一句（`GROQ_API_KEY` / `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` 擇一設定即可，優先順序 Groq → Gemini → Anthropic）
   - 都可以同時種頭香（留自己的第一句領受，只對「今天」有效）
+- `/history`：回顧月曆，往回翻小組排過的日子，點進去唯讀看那天的經文＋動態牆；格子只代表「那天有沒有排經文」，不標記「你有沒有寫」，不是完成率視覺化
 - LINE Login OAuth 骨架、`@login_required` / `@admin_required`、最小可用的 CSRF 保護
-- 首頁「到 bibile-actionbook 深度閱讀這段」連結
+- 首頁「到 bibile-actionbook 深度閱讀這段」連結：會直接跳到今天這段對應的書卷／章節，不是固定連到首頁
 - 真的 PWA：可以「加入主畫面」變成看起來像原生 app、有 service worker、離線時顯示 `/offline` 而不是瀏覽器的錯誤頁
 - Rule 14 數位遺囑模組起點：一鍵匯出 + 離線閱讀器（見下）
 - Rule 15 教學按鈕（右上角「？」）

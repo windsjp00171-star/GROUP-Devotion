@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}回顧{% endblock %}
+{% block tour_key %}history{% endblock %}
+
+{% block content %}
+<div class="screen">
+
+  <header class="home-header">
+    <h1>回顧</h1>
+    <p class="history-sub">往回翻翻小組一起讀過的日子</p>
+  </header>
+
+  <section class="passage-card history-card">
+    <div class="history-nav">
+      <a class="history-nav__btn" href="{{ url_for('history', year=prev_year, month=prev_month) }}" aria-label="上個月">←</a>
+      <p class="history-month">{{ year }} 年 {{ month }} 月</p>
+      {% if has_next %}
+      <a class="history-nav__btn" href="{{ url_for('history', year=next_year, month=next_month) }}" aria-label="下個月">→</a>
+      {% else %}
+      <span class="history-nav__btn history-nav__btn--disabled" aria-hidden="true">→</span>
+      {% endif %}
+    </div>
+
+    <div class="history-grid history-grid--head">
+      {% for label in ['日', '一', '二', '三', '四', '五', '六'] %}
+      <span>{{ label }}</span>
+      {% endfor %}
+    </div>
+
+    {% for week in weeks %}
+    <div class="history-grid">
+      {% for cell in week %}
+        {% if cell is none %}
+        <span class="history-day history-day--blank"></span>
+        {% elif cell.has_passage %}
+        <a class="history-day history-day--has{{ ' history-day--today' if cell.is_today else '' }}"
+           href="{{ url_for('history_day', passage_date=cell.date) }}">
+          {{ cell.day }}
+          <span class="history-day__dot" aria-hidden="true"></span>
+        </a>
+        {% else %}
+        <span class="history-day{{ ' history-day--today' if cell.is_today else '' }}">{{ cell.day }}</span>
+        {% endif %}
+      {% endfor %}
+    </div>
+    {% endfor %}
+
+    <p class="history-hint">有點的日子表示小組那天有排經文，點進去可以看那天大家怎麼讀。</p>
+  </section>
+
+</div>
+{% endblock %}

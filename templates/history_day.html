@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}{{ passage_date }}{% endblock %}
+{% block tour_key %}history{% endblock %}
+
+{% block content %}
+<div class="screen">
+
+  <header class="home-header">
+    <a class="history-back" href="{{ url_for('history') }}">← 回到回顧</a>
+    <h1>{{ passage_date }}</h1>
+  </header>
+
+  <section class="passage-card">
+    <p class="passage-ref">{{ passage.reference }}</p>
+
+    <div class="passage-text">
+      {% for index, verse in verses %}
+      <p class="verse-static">{{ verse }}</p>
+      {% endfor %}
+    </div>
+
+    <p class="prompt">{{ passage.guiding_question }}</p>
+  </section>
+
+  <section class="feed" id="feed">
+    <p class="feed-title">那天，同一段路上</p>
+
+    {% if not reflections %}
+    <p class="feed-empty">那天還沒有人留下什麼。</p>
+    {% endif %}
+
+    {% for r in reflections %}
+    <div class="feed-item{{ ' feed-item--mine' if r.mine else '' }}">
+      <span class="feed-item__mark mark mark--{{ r.kind }}" style="--mark-color:{{ r.color }}" aria-hidden="true">
+        {% if r.kind == 'flower' %}
+          <span class="mark__petal mark__petal--t"></span>
+          <span class="mark__petal mark__petal--b"></span>
+          <span class="mark__petal mark__petal--l"></span>
+          <span class="mark__petal mark__petal--r"></span>
+          <span class="mark__center"></span>
+        {% elif r.kind == 'fruit' %}
+          <span class="mark__stem"></span>
+          <span class="mark__body"></span>
+        {% elif r.kind == 'butterfly' %}
+          <span class="mark__wing mark__wing--l"></span>
+          <span class="mark__wing mark__wing--r"></span>
+          <span class="mark__antenna"></span>
+        {% elif r.kind == 'stone' %}
+          <span class="mark__rock"></span>
+          <span class="mark__shine"></span>
+        {% endif %}
+      </span>
+      <div class="feed-item__body">
+        <p class="feed-item__name">{{ '你' if r.mine else r.name }}</p>
+        {% if r.verse_index is not none %}
+        <p class="feed-item__verse">「{{ passage.verses[r.verse_index] }}」</p>
+        {% endif %}
+        {% if r.note and r.note.strip() %}
+        <p class="feed-item__note">{{ r.note }}</p>
+        {% elif r.verse_index is not none %}
+        <p class="feed-item__note feed-item__note--empty">{{ '你' if r.mine else r.name }} 也在這句停下了腳步，沒有多寫什麼</p>
+        {% else %}
+        <p class="feed-item__note feed-item__note--empty">{{ '你' if r.mine else r.name }} 也讀了這段</p>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </section>
+
+  {% if bible_actionbook_url %}
+  <p class="rule14-link">
+    <a href="{{ bible_actionbook_url }}" target="_blank" rel="noopener">到 bibile-actionbook 深度閱讀這段（人物／地點卡）→</a>
+  </p>
+  {% endif %}
+
+</div>
+{% endblock %}
