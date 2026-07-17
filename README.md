@@ -78,6 +78,9 @@ LINE OAuth 授權碼流程），`@login_required`、CSRF 則是這個專案自�
 ```sql
 -- 2026-07-16：verse_index 改成可以是 null（「我也讀了」不標記任何一句）
 alter table reflections alter column verse_index drop not null;
+
+-- 2026-07-17：members 加 is_leader（後台可以指定誰是輔導）
+alter table members add column if not exists is_leader boolean not null default false;
 ```
 
 到 Supabase 專案的 SQL Editor 貼上執行一次就好，既有資料不受影響。
