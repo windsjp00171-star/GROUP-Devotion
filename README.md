@@ -80,6 +80,9 @@ alter table reflections alter column verse_index drop not null;
 
 -- 2026-07-17：members 加 is_leader（後台可以指定誰是輔導）
 alter table members add column if not exists is_leader boolean not null default false;
+
+-- 2026-07-17：members 加 nickname（可以設定不是本名的暱稱）
+alter table members add column if not exists nickname text;
 ```
 
 到 Supabase 專案的 SQL Editor 貼上執行一次就好，既有資料不受影響。
