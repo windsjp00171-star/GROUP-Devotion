@@ -6,7 +6,11 @@
 <div class="screen">
 
   <header class="home-header">
+    {% if first_login %}
+    <h1>先幫自己取個名字</h1>
+    {% else %}
     <h1>你的暱稱</h1>
+    {% endif %}
   </header>
 
   {% if saved %}
@@ -17,8 +21,14 @@
   {% endif %}
 
   <section class="passage-card">
+    {% if first_login %}
+    <p class="admin-hint" style="margin-top:0;">動態牆上大家會看到這個名字，不是本名也可以。</p>
+    {% endif %}
     <form class="admin-form" method="post" action="{{ url_for('settings') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {% if next_url %}
+      <input type="hidden" name="next" value="{{ next_url }}">
+      {% endif %}
       <label class="admin-label" for="nickname">大家會看到的名字</label>
       <input class="admin-input" type="text" id="nickname" name="nickname"
              placeholder="{{ member.display_name or '你的名字' }}"
@@ -28,7 +38,7 @@
     </form>
   </section>
 
-  <a class="link-quiet" href="{{ url_for('home') }}">回到今天這段</a>
+  <a class="link-quiet" href="{{ next_url or url_for('home') }}">{{ '先跳過，之後再到上面「暱稱」設定' if first_login else '回到今天這段' }}</a>
 
 </div>
 {% endblock %}

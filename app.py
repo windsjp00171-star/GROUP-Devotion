@@ -95,13 +95,24 @@ def service_worker():
 @app.route("/settings", methods=["GET", "POST"])
 @login_required
 def settings():
+    # 只接受站內相對路徑，避免變成 open redirect。
+    next_url = request.values.get("next") or ""
+    if next_url and not next_url.startswith("/"):
+        next_url = ""
+
     if request.method == "POST":
         nickname = (request.form.get("nickname") or "").strip()
         set_nickname(_current_member_id(), nickname)
-        return redirect(url_for("settings", saved=1))
+        return redirect(next_url or url_for("settings", saved=1))
 
     member = get_member_by_line_id(get_user()["line_user_id"]) or {}
-    return render_template("settings.html", member=member, saved=request.args.get("saved") == "1")
+    return render_template(
+        "settings.html",
+        member=member,
+        saved=request.args.get("saved") == "1",
+        first_login=request.args.get("first") == "1",
+        next_url=next_url,
+    )
 
 
 @app.route("/")

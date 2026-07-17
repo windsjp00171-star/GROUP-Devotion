@@ -1,6 +1,6 @@
 // 改 /static/ 底下任何檔案都要記得把這個版本號往上加一，
 // 不然舊版會被下面的 cache-first 策略永久卡住，使用者裝置永遠抓不到新檔案。
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const STATIC_CACHE = 'static-' + CACHE_VERSION;
 const OFFLINE_URL = '/offline';
 const PRECACHE_ASSETS = [

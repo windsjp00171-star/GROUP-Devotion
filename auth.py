@@ -137,10 +137,13 @@ def line_callback():
 
     from data_store import upsert_member
 
-    upsert_member(user)
+    member = upsert_member(user)
 
-    next_url = session.pop("login_next", None)
-    return redirect(next_url or url_for("home"))
+    next_url = session.pop("login_next", None) or url_for("home")
+    if not member.get("nickname"):
+        # 第一次登入、還沒取過暱稱：先請他取一個，取完（或跳過）再去原本要去的地方。
+        return redirect(url_for("settings", first="1", next=next_url))
+    return redirect(next_url)
 
 
 @auth_bp.get("/logout")
@@ -163,5 +166,7 @@ if DEV_MODE:
         }
         session.permanent = True
         session["user"] = user
-        upsert_member(user)
+        member = upsert_member(user)
+        if not member.get("nickname"):
+            return redirect(url_for("settings", first="1"))
         return redirect(url_for("home"))
