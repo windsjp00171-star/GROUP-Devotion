@@ -861,6 +861,12 @@ body {
   color: var(--color-muted);
 }
 
+.history-marked-hint {
+  margin: 14px 0 0;
+  font-size: 13px;
+  color: var(--color-ink-soft);
+}
+
 /* ---------- 動畫 ---------- */
 
 @keyframes gentleBob {

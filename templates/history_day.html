@@ -21,6 +21,17 @@
     </div>
 
     <p class="prompt">{{ passage.guiding_question }}</p>
+
+    {% if not already_marked %}
+    <form method="post" action="{{ url_for('submit_reflection') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="passage_id" value="{{ passage.id }}">
+      <input type="hidden" name="passage_date" value="{{ passage_date }}">
+      <button type="submit" class="btn btn--ghost">我也讀了</button>
+    </form>
+    {% else %}
+    <p class="history-marked-hint">你也讀過這段了</p>
+    {% endif %}
   </section>
 
   <section class="feed" id="feed">

@@ -128,6 +128,16 @@ def home():
 @app.route("/reflections", methods=["POST"])
 @login_required
 def submit_reflection():
+    # 回顧頁的「我也讀了」：針對指定（通常是過去）的那一段經文登記已讀，
+    # 不開放在回顧頁寫領受或標記哪一句——回顧是往回看，不是回頭補作業。
+    passage_id = request.form.get("passage_id")
+    if passage_id:
+        add_my_reflection(passage_id, _current_member_id(), None, "")
+        passage_date = request.form.get("passage_date")
+        if passage_date:
+            return redirect(url_for("history_day", passage_date=passage_date))
+        return redirect(url_for("history"))
+
     passage = get_today_passage()
     if not passage:
         return redirect(url_for("home"))
@@ -206,6 +216,7 @@ def history_day(passage_date):
     passage["guiding_question"] = passage.get("guiding_question") or DEFAULT_GUIDING_QUESTION
 
     reflections = get_reflections(passage["id"], _current_member_id())
+    mine = next((r for r in reflections if r["mine"]), None)
 
     return render_template(
         "history_day.html",
@@ -213,6 +224,7 @@ def history_day(passage_date):
         passage_date=passage_date,
         verses=list(enumerate(passage["verses"])),
         reflections=reflections,
+        already_marked=mine is not None,
         bible_actionbook_url=_actionbook_deep_link(passage["reference"]),
     )
 
