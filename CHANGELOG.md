@@ -2,6 +2,12 @@
 
 本文件記錄 GROUP-Devotion 的重要變更，時間由新到舊排列。
 
+## [Unreleased] - 2026-07-17（深夜）
+
+### 新增
+- 真的 PWA：`static/manifest.json`、Pillow 產生的小夥伴造型圖示（含 maskable 版本）、`sw.js`、`/offline` 離線頁。事故記錄：一開始把 service worker 放在 `/static/sw.js`，實測才發現瀏覽器把 SW 控制範圍鎖在所在資料夾（scope 變 `/static/`，管不到 `/` 等真正頁面），改成從根目錄 `/sw.js` 提供才是真的可安裝、能離線。用真的 Chromium 驗證過整條鏈路（註冊成功、scope 正確、離線時真的顯示 `/offline` 畫面）。
+- 本機開發伺服器加 `threaded=True`，診斷 PWA 問題時發現的順手修正（正式站 gunicorn 不受影響）。
+
 ## [Unreleased] - 2026-07-17（晚上）
 
 ### 新增

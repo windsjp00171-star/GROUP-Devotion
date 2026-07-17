@@ -42,6 +42,8 @@ schema.sql                Supabase 資料庫結構
 templates/                 Jinja2 樣板
 static/css/style.css       視覺樣式（暖色、圓角、無壓力感）
 static/js/                 純 JS，只處理畫面上的小互動（標記一句、教學導覽），不是前端框架
+static/manifest.json       PWA manifest
+static/sw.js               Service worker（用 /sw.js 這個路由提供，見 app.py 的說明）
 ```
 
 ## 目前做了什麼（第一版範圍）
@@ -55,6 +57,7 @@ static/js/                 純 JS，只處理畫面上的小互動（標記一�
   - 都可以同時種頭香（留自己的第一句領受，只對「今天」有效）
 - LINE Login OAuth 骨架、`@login_required` / `@admin_required`、最小可用的 CSRF 保護
 - 首頁「到 bibile-actionbook 深度閱讀這段」連結
+- 真的 PWA：可以「加入主畫面」變成看起來像原生 app、有 service worker、離線時顯示 `/offline` 而不是瀏覽器的錯誤頁
 - Rule 14 數位遺囑模組起點：一鍵匯出 + 離線閱讀器（見下）
 - Rule 15 教學按鈕（右上角「？」）
 - Rule 16 CHANGELOG.md
