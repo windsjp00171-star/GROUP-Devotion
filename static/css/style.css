@@ -383,6 +383,60 @@ body.tour-active {
   line-height: 1.6;
 }
 
+.member-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-card-border);
+}
+
+.member-row:last-child {
+  border-bottom: none;
+}
+
+.member-row__who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.member-row__name {
+  font-size: 14px;
+  color: var(--color-ink);
+}
+
+.member-row__badge {
+  font-size: 11px;
+  color: var(--color-muted);
+  background: #F3EEDF;
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.member-row__badge--leader {
+  color: #8A6D3B;
+  background: #F3DCA0;
+}
+
+.member-row__toggle {
+  border: 1px solid #DCCE9E;
+  background: var(--color-card);
+  color: #8A6D3B;
+  font-size: 12px;
+  font-family: var(--font-ui);
+  border-radius: 999px;
+  padding: 6px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.member-row__toggle:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .admin-form {
   display: flex;
   flex-direction: column;

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}誰是輔導{% endblock %}
+{% block tour_key %}admin{% endblock %}
+
+{% block content %}
+<div class="screen">
+
+  <header class="home-header">
+    <p class="eyebrow">輔導後台</p>
+    <h1>誰是輔導</h1>
+  </header>
+
+  <p class="admin-hint">輔導可以進後台排經文。在 Railway 環境變數設定的是永久管理員，這裡看得到但不能取消；其他成員可以直接在這裡設成／取消輔導。</p>
+
+  <section class="passage-card">
+    {% if not members %}
+    <p class="admin-hint">還沒有人登入過，名單是空的。</p>
+    {% endif %}
+    {% for m in members %}
+    <div class="member-row">
+      <div class="member-row__who">
+        <span class="member-row__name">{{ m.display_name or '（還沒有名字）' }}</span>
+        {% if m.is_env_admin %}
+        <span class="member-row__badge">永久管理員</span>
+        {% elif m.is_leader %}
+        <span class="member-row__badge member-row__badge--leader">輔導</span>
+        {% endif %}
+      </div>
+      {% if not m.is_env_admin %}
+      <form method="post" action="{{ url_for('admin_toggle_leader') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="member_id" value="{{ m.id }}">
+        <input type="hidden" name="is_leader" value="{{ '0' if m.is_leader else '1' }}">
+        <button type="submit" class="member-row__toggle" {% if m.id == current_member_id %}disabled title="不能改自己"{% endif %}>
+          {{ '取消輔導' if m.is_leader else '設為輔導' }}
+        </button>
+      </form>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </section>
+
+  <a class="link-quiet" href="{{ url_for('admin') }}">回到排經文</a>
+
+</div>
+{% endblock %}

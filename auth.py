@@ -40,9 +40,23 @@ def get_user() -> dict:
     return session.get("user", {})
 
 
+def is_env_admin(line_user_id: str) -> bool:
+    """`ADMIN_LINE_USER_IDS` 環境變數設定的，是永久管理員——存在 Railway
+    設定裡，不是資料庫，這裡沒辦法取消，只能去環境變數改。"""
+    return bool(line_user_id) and line_user_id in ADMIN_LINE_USER_IDS
+
+
 def is_admin() -> bool:
     uid = get_user().get("line_user_id", "")
-    return bool(uid) and uid in ADMIN_LINE_USER_IDS
+    if not uid:
+        return False
+    if is_env_admin(uid):
+        return True
+
+    from data_store import get_member_by_line_id
+
+    member = get_member_by_line_id(uid)
+    return bool(member and member.get("is_leader"))
 
 
 def login_required(view):

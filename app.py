@@ -10,7 +10,7 @@ from flask import Flask, Response, redirect, render_template, request, url_for
 
 import ai_guide
 import local_time
-from auth import auth_bp, admin_required, get_user, is_admin, login_required, require_login
+from auth import auth_bp, admin_required, get_user, is_admin, is_env_admin, login_required, require_login
 from csrf import csrf_protect, csrf_token
 from data_store import (
     add_my_reflection,
@@ -19,6 +19,8 @@ from data_store import (
     get_reflections,
     get_today_passage,
     import_passages,
+    list_members,
+    set_member_leader,
     set_passage_for_date,
     set_today_passage,
 )
@@ -202,6 +204,26 @@ def admin_template():
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": "attachment; filename=plan_template.xlsx"},
     )
+
+
+@app.route("/admin/leaders")
+@admin_required
+def admin_leaders():
+    members = list_members()
+    for m in members:
+        m["is_env_admin"] = is_env_admin(m["line_user_id"])
+    return render_template("admin_leaders.html", members=members, current_member_id=_current_member_id())
+
+
+@app.route("/admin/leaders/toggle", methods=["POST"])
+@admin_required
+def admin_toggle_leader():
+    member_id = request.form.get("member_id")
+    make_leader = request.form.get("is_leader") == "1"
+    # 不能改自己：避免手滑把自己踢出去、後台從此進不去。
+    if member_id and member_id != _current_member_id():
+        set_member_leader(member_id, make_leader)
+    return redirect(url_for("admin_leaders"))
 
 
 @app.route("/export/<fmt>")

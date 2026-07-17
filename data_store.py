@@ -140,10 +140,27 @@ def upsert_member(user: dict) -> dict:
 
 def get_member_by_line_id(line_user_id: str) -> dict | None:
     if _demo_mode():
-        return {"id": f"demo-{line_user_id}"}
+        return {"id": f"demo-{line_user_id}", "is_leader": False}
 
     result = sb.table("members").select("*").eq("line_user_id", line_user_id).limit(1).execute()
     return result.data[0] if result.data else None
+
+
+def list_members() -> list[dict]:
+    """小組所有成員，管理輔導名單用。"""
+    if _demo_mode():
+        return []
+
+    group = get_or_create_default_group()
+    result = sb.table("members").select("*").eq("group_id", group["id"]).order("created_at").execute()
+    return result.data
+
+
+def set_member_leader(member_id: str, is_leader: bool) -> None:
+    """在後台把某個成員設成／取消輔導。"""
+    if _demo_mode():
+        return
+    sb.table("members").update({"is_leader": is_leader}).eq("id", member_id).execute()
 
 
 # ---------- 今天這段經文 ----------
