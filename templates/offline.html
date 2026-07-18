@@ -4,15 +4,7 @@
 
 {% block content %}
 <div class="screen screen--center">
-  <div class="mascot mascot--small" aria-hidden="true">
-    <span class="mascot__ear mascot__ear--l"></span>
-    <span class="mascot__ear mascot__ear--r"></span>
-    <span class="mascot__face"></span>
-    <span class="mascot__eye mascot__eye--l"></span>
-    <span class="mascot__eye mascot__eye--r"></span>
-    <span class="mascot__cheek mascot__cheek--l"></span>
-    <span class="mascot__cheek mascot__cheek--r"></span>
-  </div>
+  {% include "_sprout.html" %}
   <p class="empty-state">現在沒有網路，等連上了再回來看看。</p>
   <button type="button" class="btn btn--ghost" onclick="location.reload()">重新整理</button>
 </div>

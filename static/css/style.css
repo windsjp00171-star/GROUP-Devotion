@@ -889,48 +889,14 @@ body {
 
 /* ---------- 小夥伴 ---------- */
 
-.mascot {
-  position: relative;
+/* 「書＋嫩芽」小圖示（取代原本那隻小夥伴），出現在離線／錯誤／還沒排經文等頁面。 */
+.sprout-icon {
+  width: 72px;
+  height: 72px;
+  display: block;
   flex-shrink: 0;
   animation: gentleBob 4s ease-in-out infinite;
 }
-
-.mascot--small { width: 56px; height: 56px; }
-
-.mascot__ear {
-  position: absolute;
-  background: #8FB07A;
-  border-radius: 50%;
-}
-.mascot--small .mascot__ear { width: 10px; height: 10px; top: -2px; }
-.mascot--small .mascot__ear--l { left: 14px; }
-.mascot--small .mascot__ear--r { left: 32px; }
-
-.mascot__face {
-  position: absolute;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #FBE7D2, #F3D0AC);
-}
-.mascot--small .mascot__face { inset: 6px 4px 4px 4px; box-shadow: inset -4px -6px 10px rgba(0, 0, 0, 0.05); }
-
-.mascot__eye {
-  position: absolute;
-  background: var(--color-ink);
-  border-radius: 50%;
-}
-.mascot--small .mascot__eye { width: 4px; height: 5px; top: 26px; }
-.mascot--small .mascot__eye--l { left: 18px; }
-.mascot--small .mascot__eye--r { left: 30px; }
-
-.mascot__cheek {
-  position: absolute;
-  background: #F0A98F;
-  opacity: 0.55;
-  border-radius: 50%;
-}
-.mascot--small .mascot__cheek { width: 7px; height: 4px; top: 31px; }
-.mascot--small .mascot__cheek--l { left: 11px; }
-.mascot--small .mascot__cheek--r { left: 35px; }
 
 /* ---------- 領受記號：花／果／蝶／石 ---------- */
 
