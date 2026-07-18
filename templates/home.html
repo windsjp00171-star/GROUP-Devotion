@@ -23,7 +23,10 @@
       {% endfor %}
     </div>
 
-    <p class="prompt" data-tour-step="2" data-tour-text="點一句，也讓你想停下腳步的話——不點也可以。">{{ passage.guiding_question }}</p>
+    <div class="prompt-block" data-tour-step="2" data-tour-text="點一句，也讓你想停下腳步的話——不點也可以。">
+      <p class="prompt-label">💭 引導問題</p>
+      <p class="prompt">{{ passage.guiding_question }}</p>
+    </div>
     <p class="prompt-hint">點一句、或寫下來，都可以</p>
 
     {% if not submitted %}

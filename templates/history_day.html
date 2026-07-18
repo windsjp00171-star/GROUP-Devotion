@@ -21,7 +21,10 @@
       {% endfor %}
     </div>
 
-    <p class="prompt">{{ passage.guiding_question }}</p>
+    <div class="prompt-block">
+      <p class="prompt-label">💭 引導問題</p>
+      <p class="prompt">{{ passage.guiding_question }}</p>
+    </div>
 
     {% if not already_marked %}
     <form method="post" action="{{ url_for('submit_reflection') }}">
