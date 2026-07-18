@@ -277,15 +277,22 @@ body {
   padding: 3px 10px 3px 8px;
 }
 
+.passage-text .verse:last-child {
+  border-bottom: none;
+}
+
 .prompt {
-  margin: 14px 0 0;
+  margin: 20px 0 0;
+  padding: 14px 16px;
+  background: var(--color-bg-screen);
+  border-radius: 14px;
   font-size: 15px;
   color: var(--color-ink-soft);
   line-height: 1.6;
 }
 
 .prompt-hint {
-  margin: 2px 0 0;
+  margin: 8px 2px 0;
   font-size: 12px;
   color: var(--color-muted);
 }
