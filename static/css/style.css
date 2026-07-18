@@ -790,6 +790,11 @@ body {
   margin-top: 8px;
 }
 
+/* 現在這個容器一定會渲染（給 AJAX 就地更新用），空的時候不要多佔一段間距 */
+.feed-item__reactions-list:empty {
+  margin-top: 0;
+}
+
 .feed-item__reaction-line {
   margin: 0;
   font-size: 12px;

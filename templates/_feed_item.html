@@ -52,22 +52,20 @@
     </div>
     {% endif %}
 
-    {% if r.reactions %}
-    <div class="feed-item__reactions-list">
+    <div class="feed-item__reactions-list" data-reactions-list>
       {% for reaction in r.reactions %}
       <p class="feed-item__reaction-line">{{ reaction_kinds[reaction.kind].emoji }} {{ '你' if reaction.mine else reaction.name }}{{ reaction_kinds[reaction.kind].phrase }}</p>
       {% endfor %}
     </div>
-    {% endif %}
 
     <div class="feed-item__react-buttons">
       {% for kind, info in reaction_kinds.items() %}
-      <form method="post" action="{{ url_for('submit_reaction', reflection_id=r.id) }}">
+      <form method="post" action="{{ url_for('submit_reaction', reflection_id=r.id) }}" data-react-form>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="next" value="{{ request.path }}">
         <input type="hidden" name="kind" value="{{ '' if r.my_reaction_kind == kind else kind }}">
         <button type="submit" class="feed-item__react-btn{{ ' feed-item__react-btn--active' if r.my_reaction_kind == kind else '' }}"
-                aria-label="{{ info.phrase }}" title="{{ info.phrase }}">{{ info.emoji }}</button>
+                data-kind="{{ kind }}" aria-label="{{ info.phrase }}" title="{{ info.phrase }}">{{ info.emoji }}</button>
       </form>
       {% endfor %}
     </div>

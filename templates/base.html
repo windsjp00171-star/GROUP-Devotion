@@ -37,6 +37,7 @@
     {% block content %}{% endblock %}
   </div>
 
+  <script id="reaction-kinds" type="application/json">{{ reaction_kinds | tojson }}</script>
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
   <script src="{{ url_for('static', filename='js/tour.js') }}"></script>
   <script>

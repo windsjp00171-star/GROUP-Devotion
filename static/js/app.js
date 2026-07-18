@@ -5,7 +5,66 @@ document.addEventListener('DOMContentLoaded', () => {
   initVerseMarking();
   initSubmitFeedback();
   initSortSelect();
+  initReactions();
 });
+
+function initReactions() {
+  // 反應改成不整頁重整：攔截送出、用 fetch 打 API、就地更新那一則的反應區。
+  // 沒有 JS（或離線 fetch 失敗）就退回一般表單送出，功能不會消失。
+  const kindsEl = document.getElementById('reaction-kinds');
+  if (!kindsEl) return;
+  let KINDS;
+  try {
+    KINDS = JSON.parse(kindsEl.textContent);
+  } catch (e) {
+    return;
+  }
+
+  document.querySelectorAll('[data-react-form]').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const item = form.closest('.feed-item');
+      fetch(form.action, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: new FormData(form),
+      })
+        .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
+        .then((data) => applyReactionUpdate(item, data, KINDS))
+        .catch(() => form.submit()); // 出錯（例如離線）就退回一般送出
+    });
+  });
+}
+
+function applyReactionUpdate(item, data, KINDS) {
+  if (!item) return;
+  const mine = data.my_reaction_kind;
+
+  // 每個反應按鈕：對到我目前選的那種就 active，下一次點它是取消（kind 送空字串）。
+  item.querySelectorAll('[data-react-form]').forEach((form) => {
+    const btn = form.querySelector('.feed-item__react-btn');
+    const kindInput = form.querySelector('input[name="kind"]');
+    if (!btn) return;
+    const active = btn.dataset.kind === mine;
+    btn.classList.toggle('feed-item__react-btn--active', active);
+    if (kindInput) kindInput.value = active ? '' : btn.dataset.kind;
+  });
+
+  // 重建反應文字列（用 textContent，名字是使用者輸入的暱稱，不能用 innerHTML）。
+  const list = item.querySelector('[data-reactions-list]');
+  if (list) {
+    list.textContent = '';
+    (data.reactions || []).forEach((r) => {
+      const info = KINDS[r.kind];
+      if (!info) return;
+      const p = document.createElement('p');
+      p.className = 'feed-item__reaction-line';
+      p.textContent = `${info.emoji} ${r.mine ? '你' : r.name}${info.phrase}`;
+      list.appendChild(p);
+    });
+  }
+  if (navigator.vibrate) navigator.vibrate(8);
+}
 
 function initSortSelect() {
   // 排序下拉選單：選了就直接跳到那個排序的網址（option 的 value 就是目標網址）。

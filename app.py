@@ -293,9 +293,21 @@ def delete_my_reflection(reflection_id):
 @app.route("/reflections/<reflection_id>/react", methods=["POST"])
 @login_required
 def submit_reaction(reflection_id):
-    """對一則領受留固定反應（不是自由留言）。再點一次已經留過的那個反應就是取消。"""
+    """對一則領受留固定反應（不是自由留言）。再點一次已經留過的那個反應就是取消。
+    有 JS 的話回 JSON 讓畫面就地更新（不整頁重整）；沒 JS 就退回一般轉頁。"""
     kind = request.form.get("kind") or None
-    set_reaction(reflection_id, _current_member_id(), kind)
+    my_member_id = _current_member_id()
+    set_reaction(reflection_id, my_member_id, kind)
+
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        reactions = get_reactions_for_passage([reflection_id], my_member_id).get(reflection_id, [])
+        mine = next((x for x in reactions if x["mine"]), None)
+        return {
+            "reflection_id": reflection_id,
+            "my_reaction_kind": mine["kind"] if mine else None,
+            "reactions": [{"kind": x["kind"], "name": x["name"], "mine": x["mine"]} for x in reactions],
+        }
+
     next_url = request.form.get("next") or ""
     if next_url.startswith("/"):
         return redirect(next_url)
