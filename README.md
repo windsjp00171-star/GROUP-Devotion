@@ -48,7 +48,7 @@ static/sw.js               Service worker（用 /sw.js 這個路由提供，見 
 
 ## 目前做了什麼（第一版範圍）
 
-- 首頁：今天這段經文、可點一句標記、可留一句領受（文字選填，不寫也可以），下面直接接著「同一段路上」——小組每個人在這段經文的領受，不用另外開頁面、不用點開才看得到
+- 首頁：今天這段經文（有節號的話會顯示在前面）、可以同時點好幾句標記（各自獨立切換，不是只能選一句）、可留一句領受（文字選填，不寫也可以），下面直接接著「同一段路上」——小組每個人在這段經文的領受，不用另外開頁面、不用點開才看得到
 - 輔導後台 `/admin`：三種排經文的方式
   - 書卷＋章節（選書卷、填章節，自動從和合本全文帶出經文）
   - 批次匯入 xlsx（跟天父日記的 `plan.xlsx` 同一種欄位：`date / book / range / guiding_question`，一次排好接下來好幾天，`/admin/template` 可下載空白範本）
@@ -87,6 +87,12 @@ alter table members add column if not exists is_leader boolean not null default 
 
 -- 2026-07-17：members 加 nickname（可以設定不是本名的暱稱）
 alter table members add column if not exists nickname text;
+
+-- 2026-07-19：daily_passages 加 verse_labels（每句對應的節號，畫面上顯示節號用）
+alter table daily_passages add column if not exists verse_labels jsonb;
+
+-- 2026-07-19：reflections 加 verse_indexes（可以同時針對好幾句經文，不是只能選一句）
+alter table reflections add column if not exists verse_indexes int[];
 ```
 
 到 Supabase 專案的 SQL Editor 貼上執行一次就好，既有資料不受影響。

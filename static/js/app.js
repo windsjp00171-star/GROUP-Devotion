@@ -7,6 +7,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function initVerseMarking() {
+  // 每一句的標記是各自獨立切換的，不是「點新的一句就取消舊的」——
+  // 可以同時針對好幾句經文留一則領受，點已經標記的那句就是取消那一句。
   const verses = document.querySelectorAll('.verse');
   const input = document.getElementById('verse-index-input');
   if (!verses.length || !input) return;
@@ -15,31 +17,32 @@ function initVerseMarking() {
   const hintText = document.getElementById('selected-verse-text');
   const clearBtn = document.getElementById('selected-verse-clear');
 
-  function clearMark() {
-    verses.forEach((v) => v.classList.remove('verse--marked'));
-    input.value = '';
-    if (hint) hint.hidden = true;
+  function syncSelection() {
+    const marked = Array.from(verses).filter((v) => v.classList.contains('verse--marked'));
+    input.value = marked.map((v) => v.dataset.verseIndex).join(',');
+    if (!hint || !hintText) return;
+    if (!marked.length) {
+      hint.hidden = true;
+      return;
+    }
+    hintText.textContent = marked.map((v) => v.textContent.trim()).join('／');
+    hint.hidden = false;
   }
 
   verses.forEach((verse) => {
     verse.addEventListener('click', () => {
-      const alreadyMarked = verse.classList.contains('verse--marked');
-      clearMark();
-      if (alreadyMarked) return; // 再點一次同一句：取消標記，回到「沒有針對哪一句」
-
-      verse.classList.add('verse--marked');
-      input.value = verse.dataset.verseIndex;
-      if (hint && hintText) {
-        hintText.textContent = verse.textContent.trim();
-        hint.hidden = false;
-      }
-      // 手機上點擊回饋容易被忽略，有支援的話震一下加強「有點到」的感覺。
-      if (navigator.vibrate) navigator.vibrate(12);
+      verse.classList.toggle('verse--marked');
+      // 手機上點擊回饋容易被忽略，有支援的話震一下加強「有點到」的感覺（取消標記不用震）。
+      if (verse.classList.contains('verse--marked') && navigator.vibrate) navigator.vibrate(12);
+      syncSelection();
     });
   });
 
   if (clearBtn) {
-    clearBtn.addEventListener('click', clearMark);
+    clearBtn.addEventListener('click', () => {
+      verses.forEach((v) => v.classList.remove('verse--marked'));
+      syncSelection();
+    });
   }
 }
 

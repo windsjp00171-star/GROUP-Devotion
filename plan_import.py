@@ -9,7 +9,7 @@ from datetime import date, datetime
 
 import openpyxl
 
-from scripture import get_scripture
+from scripture import get_scripture_with_labels
 
 REQUIRED_COLUMNS = {"date", "book", "range"}
 
@@ -75,8 +75,8 @@ def _parse_plan_file(file_stream) -> tuple[list[dict], list[str]]:
                     errors.append(f"第 {row_num} 列的日期「{date_str}」看不懂，格式要 YYYY-MM-DD，跳過")
                     continue
 
-            verses = get_scripture(book, rng)
-            if not verses:
+            labeled = get_scripture_with_labels(book, rng)
+            if not labeled:
                 errors.append(f"第 {row_num} 列（{date_str} {book} {rng}）找不到經文，跳過")
                 continue
 
@@ -84,7 +84,8 @@ def _parse_plan_file(file_stream) -> tuple[list[dict], list[str]]:
                 {
                     "date": date_str,
                     "reference": f"{book} {rng}",
-                    "verses": verses,
+                    "verses": [text for _, text in labeled],
+                    "verse_labels": [label for label, _ in labeled],
                     "guiding_question": guiding_question,
                 }
             )

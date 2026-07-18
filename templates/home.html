@@ -19,7 +19,10 @@
     <div class="passage-text" id="passage-text"
          data-tour-step="1" data-tour-text="每天這裡會出現同一段經文，小組一起讀，輕點其中一句可以標記起來。">
       {% for index, verse in verses %}
-      <p class="verse" data-verse-index="{{ index }}">{{ verse }}</p>
+      <p class="verse" data-verse-index="{{ index }}">
+        {% if passage.verse_labels and passage.verse_labels[index] %}<span class="verse-num">{{ passage.verse_labels[index] }}</span>{% endif %}
+        {{ verse }}
+      </p>
       {% endfor %}
     </div>
 
@@ -32,11 +35,11 @@
     {% if not submitted %}
     <form class="reflection-form" method="post" action="{{ url_for('submit_reflection') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <input type="hidden" name="verse_index" id="verse-index-input" value="">
+      <input type="hidden" name="verse_indexes" id="verse-index-input" value="">
       <p class="selected-verse" id="selected-verse" hidden>
-        <span class="selected-verse__label">針對這句</span>
+        <span class="selected-verse__label">針對這幾句</span>
         <span class="selected-verse__text" id="selected-verse-text"></span>
-        <button type="button" class="selected-verse__clear" id="selected-verse-clear" aria-label="取消標記這一句">×</button>
+        <button type="button" class="selected-verse__clear" id="selected-verse-clear" aria-label="取消標記">×</button>
       </p>
       <textarea name="note" placeholder="想多寫一點點也可以…"></textarea>
       <button type="submit" class="btn btn--primary"
@@ -90,13 +93,16 @@
       </span>
       <div class="feed-item__body">
         <p class="feed-item__name">{{ '你' if r.mine else r.name }}</p>
-        {% if r.verse_index is not none %}
-        <p class="feed-item__verse">「{{ passage.verses[r.verse_index] }}」</p>
-        {% endif %}
+        {% for vi in r.verse_indexes %}
+        <p class="feed-item__verse">
+          {% if passage.verse_labels and passage.verse_labels[vi] %}<span class="feed-item__verse-num">{{ passage.verse_labels[vi] }}</span>{% endif %}
+          「{{ passage.verses[vi] }}」
+        </p>
+        {% endfor %}
         {% if r.note and r.note.strip() %}
         <p class="feed-item__note">{{ r.note }}</p>
-        {% elif r.verse_index is not none %}
-        <p class="feed-item__note feed-item__note--empty">{{ '你' if r.mine else r.name }} 也在這句停下了腳步，沒有多寫什麼</p>
+        {% elif r.verse_indexes %}
+        <p class="feed-item__note feed-item__note--empty">{{ '你' if r.mine else r.name }} 也在這幾句停下了腳步，沒有多寫什麼</p>
         {% else %}
         <p class="feed-item__note feed-item__note--empty">{{ '你' if r.mine else r.name }} 也讀了這段</p>
         {% endif %}

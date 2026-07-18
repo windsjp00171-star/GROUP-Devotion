@@ -39,8 +39,9 @@ def parse_range(rng: str) -> Tuple[int, int, int, int]:
     return sc, sv, ec, ev
 
 
-def _segment(book_data: dict, sc: int, sv: int, ec: int, ev: int) -> List[str]:
-    verses: List[str] = []
+def _segment(book_data: dict, sc: int, sv: int, ec: int, ev: int) -> List[Tuple[str, str]]:
+    """回傳這段範圍裡每一句的 (節號, 經文)，節號像 '9:13'。"""
+    items: List[Tuple[str, str]] = []
     for ch in range(sc, ec + 1):
         chapter = book_data.get(str(ch))
         if not chapter:
@@ -50,8 +51,8 @@ def _segment(book_data: dict, sc: int, sv: int, ec: int, ev: int) -> List[str]:
         for v in range(v_start, v_end + 1):
             text = chapter.get(str(v))
             if text and text != "見上節":
-                verses.append(text)
-    return verses
+                items.append((f"{ch}:{v}", text))
+    return items
 
 
 def resolve_book_chapter(reference: str) -> Tuple[str, int] | None:
@@ -75,8 +76,8 @@ def resolve_book_chapter(reference: str) -> Tuple[str, int] | None:
     return None
 
 
-def get_scripture(book: str, rng: str) -> List[str]:
-    """回傳一段話的逐句陣列（不含章節數字，接我們畫面上一句一行的樣子）。
+def get_scripture_with_labels(book: str, rng: str) -> List[Tuple[str, str]]:
+    """回傳一段話的 [(節號, 經文), ...]，節號像 '9:13'（跨章會自動帶對的章數）。
 
     支援單一範圍（'1:1-31'）、跨章（'1:1-2:3'）、逗號分隔多段（'6:28-29,31:3'）。
     書卷或範圍找不到就回傳空陣列，呼叫端自己決定怎麼提示使用者。
@@ -87,12 +88,17 @@ def get_scripture(book: str, rng: str) -> List[str]:
         return []
 
     book_data = BIBLE[book]
-    verses: List[str] = []
+    items: List[Tuple[str, str]] = []
     for segment in [s.strip() for s in rng.split(",") if s.strip()]:
         try:
             sc, sv, ec, ev = parse_range(segment)
         except (ValueError, KeyError):
             continue
-        verses.extend(_segment(book_data, sc, sv, ec, ev))
+        items.extend(_segment(book_data, sc, sv, ec, ev))
 
-    return verses
+    return items
+
+
+def get_scripture(book: str, rng: str) -> List[str]:
+    """回傳一段話的逐句陣列（不含章節數字，接我們畫面上一句一行的樣子）。"""
+    return [text for _, text in get_scripture_with_labels(book, rng)]

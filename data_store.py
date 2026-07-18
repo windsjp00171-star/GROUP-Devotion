@@ -49,6 +49,7 @@ def seed_demo_data() -> None:
             "只是他們的眼睛迷糊了，不認得他。",
             "耶穌對他們說，你們走路彼此談論的是什麼事呢，你們為什麼愁容滿面呢。",
         ],
+        "verse_labels": ["24:13", "24:14", "24:15", "24:16", "24:17"],
         "guiding_question": DEFAULT_GUIDING_QUESTION,
     }
     _demo_reflections = [
@@ -56,7 +57,7 @@ def seed_demo_data() -> None:
             "id": str(uuid.uuid4()),
             "member_id": "demo-思彤",
             "name": "思彤",
-            "verse_index": 3,
+            "verse_indexes": [3],
             "note": "我也覺得自己常常認不出，神其實已經在旁邊很久了。",
             "kind": "flower",
             "color": "#E8A98A",
@@ -65,7 +66,7 @@ def seed_demo_data() -> None:
             "id": str(uuid.uuid4()),
             "member_id": "demo-柏睿",
             "name": "柏睿",
-            "verse_index": 2,
+            "verse_indexes": [2],
             "note": "",
             "kind": "stone",
             "color": "#A6A08C",
@@ -74,7 +75,7 @@ def seed_demo_data() -> None:
             "id": str(uuid.uuid4()),
             "member_id": "demo-瑀彤",
             "name": "瑀彤",
-            "verse_index": 4,
+            "verse_indexes": [4, 3],
             "note": "這句戳到我，這禮拜真的很低落，但原來耶穌會直接問。",
             "kind": "butterfly",
             "color": "#9FB3D9",
@@ -83,7 +84,7 @@ def seed_demo_data() -> None:
             "id": str(uuid.uuid4()),
             "member_id": "demo-柏諺",
             "name": "柏諺",
-            "verse_index": 0,
+            "verse_indexes": [0],
             "note": "",
             "kind": "fruit",
             "color": "#E2916A",
@@ -97,6 +98,30 @@ if _demo_mode() and os.environ.get("SEED_DEMO_DATA", "1") != "0":
 
 def _bloom_color_for(member_id: str) -> str:
     return _BLOOM_COLORS[hash(member_id) % len(_BLOOM_COLORS)]
+
+
+def _upsert_with_fallback(table: str, payload: dict | list[dict], on_conflict: str, optional_keys: list[str]):
+    """先整包 upsert；Railway 部署程式碼是即時的，但 Supabase 的欄位要手動到 SQL
+    Editor 跑 migration 才會加上去，兩邊不會同時發生——如果失敗是因為 optional_keys
+    裡的欄位還沒手動加到資料庫，就把那些欄位拿掉重試一次，退化成沒有新欄位的舊行為，
+    好過讓「留下我的領受」這種核心流程直接 500。payload 可以是單筆或批次的一串。
+    """
+    try:
+        return sb.table(table).upsert(payload, on_conflict=on_conflict).execute()
+    except Exception as exc:  # noqa: BLE001 - 只在明確是「欄位不存在」時重試，其他錯誤照樣往外丟
+        # PostgREST 找不到欄位的實際錯誤長這樣（用真的請求驗證過，不是猜的）：
+        # code='PGRST204', message="Could not find the 'xxx' column of 'table' in the schema cache"
+        message = getattr(exc, "message", None) or str(exc)
+        code = getattr(exc, "code", None)
+        missing = [k for k in optional_keys if f"'{k}'" in message]
+        if not (code == "PGRST204" and missing):
+            raise
+
+        def _trim(row: dict) -> dict:
+            return {k: v for k, v in row.items() if k not in missing}
+
+        trimmed = [_trim(row) for row in payload] if isinstance(payload, list) else _trim(payload)
+        return sb.table(table).upsert(trimmed, on_conflict=on_conflict).execute()
 
 
 # ---------- group ----------
@@ -221,16 +246,24 @@ def _resolve_guiding_question(passage: dict) -> dict:
 
 
 def set_passage_for_date(
-    passage_date: str, reference: str, verses: list[str], guiding_question: str, leader_member_id: str
+    passage_date: str,
+    reference: str,
+    verses: list[str],
+    guiding_question: str,
+    leader_member_id: str,
+    verse_labels: list[str] | None = None,
 ) -> dict:
     """排定某一天的經文（不限今天，讓輔導可以一次排好接下來好幾天）。
     已經排過同一天就更新，不會重複長出第二筆。
     引導問題留空就先存空的，等真的被打開那天再生（見 _resolve_guiding_question）。
+    verse_labels 是每一句對應的節號（像 '9:13'），畫面上經文前面顯示節號用；
+    手動貼經文那條路沒有節號可以配，留 None 就好，畫面上就不顯示節號。
     """
     payload = {
         "passage_date": passage_date,
         "reference": reference,
         "verses": verses,
+        "verse_labels": verse_labels,
         "guiding_question": guiding_question,
         "created_by": leader_member_id,
     }
@@ -246,17 +279,23 @@ def set_passage_for_date(
 
     group = get_or_create_default_group()
     payload["group_id"] = group["id"]
-    result = sb.table("daily_passages").upsert(payload, on_conflict="group_id,passage_date").execute()
+    result = _upsert_with_fallback(
+        "daily_passages", payload, on_conflict="group_id,passage_date", optional_keys=["verse_labels"]
+    )
     return result.data[0]
 
 
-def set_today_passage(reference: str, verses: list[str], guiding_question: str, leader_member_id: str) -> dict:
+def set_today_passage(
+    reference: str, verses: list[str], guiding_question: str, leader_member_id: str, verse_labels: list[str] | None = None
+) -> dict:
     """輔導種頭香：排定今天這段經文。"""
-    return set_passage_for_date(local_time.today().isoformat(), reference, verses, guiding_question, leader_member_id)
+    return set_passage_for_date(
+        local_time.today().isoformat(), reference, verses, guiding_question, leader_member_id, verse_labels=verse_labels
+    )
 
 
 def import_passages(rows: list[dict], leader_member_id: str) -> tuple[int, list[str]]:
-    """批次排經文：每一列 {date, reference, verses, guiding_question}。
+    """批次排經文：每一列 {date, reference, verses, verse_labels, guiding_question}。
     回傳 (成功筆數, 失敗列的錯誤訊息)。
 
     正式站一次打包成單一個請求 upsert，不是每一列各打一次 API——一次匯入
@@ -273,7 +312,12 @@ def import_passages(rows: list[dict], leader_member_id: str) -> tuple[int, list[
         for row in rows:
             try:
                 set_passage_for_date(
-                    row["date"], row["reference"], row["verses"], row.get("guiding_question", ""), leader_member_id
+                    row["date"],
+                    row["reference"],
+                    row["verses"],
+                    row.get("guiding_question", ""),
+                    leader_member_id,
+                    verse_labels=row.get("verse_labels"),
                 )
                 ok += 1
             except Exception as exc:  # noqa: BLE001 - 示範模式下單一列壞掉不能拖垮整批
@@ -287,6 +331,7 @@ def import_passages(rows: list[dict], leader_member_id: str) -> tuple[int, list[
             "passage_date": row["date"],
             "reference": row["reference"],
             "verses": row["verses"],
+            "verse_labels": row.get("verse_labels"),
             "guiding_question": row.get("guiding_question", ""),
             "created_by": leader_member_id,
         }
@@ -294,7 +339,9 @@ def import_passages(rows: list[dict], leader_member_id: str) -> tuple[int, list[
     ]
 
     try:
-        sb.table("daily_passages").upsert(payloads, on_conflict="group_id,passage_date").execute()
+        _upsert_with_fallback(
+            "daily_passages", payloads, on_conflict="group_id,passage_date", optional_keys=["verse_labels"]
+        )
         return len(payloads), []
     except Exception as exc:  # noqa: BLE001 - 整批寫入失敗，回報給使用者，不能讓網站 500
         return 0, [f"批次寫入資料庫失敗：{exc}"]
@@ -365,7 +412,9 @@ def get_reflections(passage_id: str, my_member_id: str | None = None) -> list[di
                 "id": r["id"],
                 "member_id": r["member_id"],
                 "name": _display_name(r.get("members")),
-                "verse_index": r["verse_index"],
+                # verse_indexes 是新欄位，可以同時標好幾句；舊資料只有單一 verse_index，
+                # 沒有 verse_indexes 的話從舊欄位退回成單一元素的陣列，畫面不用分兩套邏輯。
+                "verse_indexes": r.get("verse_indexes") or ([r["verse_index"]] if r.get("verse_index") is not None else []),
                 "note": r["note"],
                 "kind": r["kind"],
                 "color": r["color"],
@@ -374,6 +423,7 @@ def get_reflections(passage_id: str, my_member_id: str | None = None) -> list[di
         ]
 
     for item in items:
+        item.setdefault("verse_indexes", [])
         item["mine"] = my_member_id is not None and item["member_id"] == my_member_id
     return items
 
@@ -393,14 +443,18 @@ def get_my_reflection(passage_id: str, member_id: str) -> dict | None:
     return result.data[0] if result.data else None
 
 
-def add_my_reflection(passage_id: str, member_id: str, verse_index: int | None, note: str) -> dict:
-    """留一句領受，或只是登記「我也讀了」（verse_index 是 None）。
-    已經留過的話就更新內容，不會重複長出第二朵花。
+def add_my_reflection(passage_id: str, member_id: str, verse_indexes: list[int] | None, note: str) -> dict:
+    """留一句領受，或只是登記「我也讀了」（verse_indexes 是 None 或空陣列）。
+    可以同時針對好幾句經文，不是只能選一句。已經留過的話就更新內容，不會重複長出第二朵花。
     """
+    verse_indexes = list(verse_indexes) if verse_indexes else None
     payload = {
         "passage_id": passage_id,
         "member_id": member_id,
-        "verse_index": verse_index,
+        # verse_index（單數）留著給還在用舊欄位的地方相容，只存第一句；
+        # verse_indexes（複數）才是完整的選句清單。
+        "verse_index": verse_indexes[0] if verse_indexes else None,
+        "verse_indexes": verse_indexes,
         "note": note,
         "kind": "flower",
         "color": _bloom_color_for(member_id),
@@ -409,13 +463,15 @@ def add_my_reflection(passage_id: str, member_id: str, verse_index: int | None, 
     if _demo_mode():
         existing = next((r for r in _demo_reflections if r["member_id"] == member_id), None)
         if existing:
-            existing.update(verse_index=verse_index, note=note)
+            existing.update(verse_indexes=verse_indexes, note=note)
             return existing
         reflection = {"id": str(uuid.uuid4()), "name": "你", **payload}
         _demo_reflections.append(reflection)
         return reflection
 
-    result = sb.table("reflections").upsert(payload, on_conflict="passage_id,member_id").execute()
+    result = _upsert_with_fallback(
+        "reflections", payload, on_conflict="passage_id,member_id", optional_keys=["verse_indexes"]
+    )
     return result.data[0]
 
 

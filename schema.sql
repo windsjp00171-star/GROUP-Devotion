@@ -35,6 +35,9 @@ create table if not exists daily_passages (
   passage_date date not null default current_date,
   reference text not null,
   verses jsonb not null,
+  -- 每一句對應的節號（像 '9:13'），跟 verses 一一對應，畫面上經文前面顯示節號用。
+  -- 手動貼經文那條路沒有節號可以配，是 null，畫面上就不顯示節號。
+  verse_labels jsonb,
   guiding_question text not null default '',
   created_by uuid references members(id) on delete set null,
   created_at timestamptz not null default now(),
@@ -45,8 +48,11 @@ create table if not exists reflections (
   id uuid primary key default gen_random_uuid(),
   passage_id uuid not null references daily_passages(id) on delete cascade,
   member_id uuid not null references members(id) on delete cascade,
-  -- null = 只是讀過，沒有標記特定一句（「我也讀了」那個輕量按鈕）
+  -- null = 只是讀過，沒有標記特定一句（「我也讀了」那個輕量按鈕）。
+  -- 舊欄位，跟 verse_indexes[0] 保持同步，給還在用單一欄位的地方相容。
   verse_index int,
+  -- 可以同時針對好幾句經文留一則領受，不是只能選一句；空陣列/null = 沒有標記任何一句。
+  verse_indexes int[],
   note text not null default '',
   kind text not null default 'flower' check (kind in ('flower', 'fruit', 'butterfly', 'stone')),
   color text not null default '#EFC26B',

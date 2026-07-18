@@ -31,7 +31,7 @@ from data_store import (
     set_today_passage,
 )
 from plan_import import parse_plan_file
-from scripture import BOOK_NAMES, get_scripture, resolve_book_chapter
+from scripture import BOOK_NAMES, get_scripture_with_labels, resolve_book_chapter
 
 load_dotenv()
 
@@ -159,11 +159,11 @@ def submit_reflection():
         add_my_reflection(passage["id"], _current_member_id(), None, "")
         return redirect(url_for("home"))
 
-    # 沒特別標記哪一句就留 None，不要偷偷歸給第 0 句——
-    # 之後在碰撞畫面才不會引用一句他根本沒選的經文。
-    verse_index = request.form.get("verse_index", type=int)
+    # 沒特別標記哪一句就是空陣列，不要偷偷歸給第 0 句——
+    # 動態牆才不會引用一句他根本沒選的經文。可以同時選好幾句，逗號分隔的索引清單。
+    verse_indexes = [int(x) for x in request.form.get("verse_indexes", "").split(",") if x.strip().isdigit()]
     note = (request.form.get("note") or "").strip()
-    add_my_reflection(passage["id"], _current_member_id(), verse_index, note)
+    add_my_reflection(passage["id"], _current_member_id(), verse_indexes, note)
     return redirect(url_for("home"))
 
 
@@ -277,7 +277,7 @@ def admin():
         passage = set_today_passage(reference, verses, guiding_question, leader_member_id)
 
         if leader_note:
-            add_my_reflection(passage["id"], leader_member_id, 0, leader_note)
+            add_my_reflection(passage["id"], leader_member_id, [0], leader_note)
 
         return redirect(url_for("admin", saved=1))
 
@@ -302,18 +302,22 @@ def admin_schedule_by_range():
     book = (request.form.get("book") or "").strip()
     verse_range = (request.form.get("range") or "").strip()
 
-    verses = get_scripture(book, verse_range)
-    if not verses:
+    labeled = get_scripture_with_labels(book, verse_range)
+    if not labeled:
         return redirect(url_for("admin", saved=0, err=f"找不到「{book} {verse_range}」，檢查一下書卷名稱跟章節格式"))
+    verse_labels = [label for label, _ in labeled]
+    verses = [text for _, text in labeled]
 
     reference = f"{book} {verse_range}"
     guiding_question = (request.form.get("guiding_question") or "").strip()
     leader_member_id = _current_member_id()
-    passage = set_passage_for_date(passage_date, reference, verses, guiding_question, leader_member_id)
+    passage = set_passage_for_date(
+        passage_date, reference, verses, guiding_question, leader_member_id, verse_labels=verse_labels
+    )
 
     leader_note = (request.form.get("leader_note") or "").strip()
     if leader_note and passage_date == local_time.today().isoformat():
-        add_my_reflection(passage["id"], leader_member_id, 0, leader_note)
+        add_my_reflection(passage["id"], leader_member_id, [0], leader_note)
 
     return redirect(url_for("admin", saved=1))
 
@@ -403,7 +407,7 @@ def export(fmt):
         writer = csv.writer(buf)
         writer.writerow(["name", "verse", "note"])
         for r in data["reflections"]:
-            verse = data["passage"]["verses"][r["verse_index"]] if r["verse_index"] is not None else ""
+            verse = "／".join(data["passage"]["verses"][i] for i in r["verse_indexes"])
             writer.writerow([r["name"], verse, r["note"]])
         return Response(
             buf.getvalue(),
