@@ -58,7 +58,10 @@ body {
   z-index: 20;
   display: flex;
   align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  /* 留右上角給教學「？」按鈕，連結多了就自己換行，不要疊到按鈕上 */
+  max-width: calc(100% - 76px);
 }
 
 .logout-link {
@@ -722,6 +725,30 @@ body {
 .feed-item__note--empty {
   font-size: 13px;
   color: var(--color-muted);
+}
+
+/* ---------- 我的領受 ---------- */
+
+.my-reflection__ref {
+  margin: 0 0 10px;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.my-reflection__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.my-reflection__jump {
+  font-size: 12px;
+  color: var(--color-ink-soft);
+  text-decoration: none;
 }
 
 .feed-item__edit {

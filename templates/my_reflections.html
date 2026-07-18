@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}我的領受{% endblock %}
+{% block tour_key %}me{% endblock %}
+
+{% block content %}
+<div class="screen">
+
+  <header class="home-header">
+    <h1>我的領受</h1>
+    <p class="history-sub">你在每段經文停下的地方，都收在這裡</p>
+    <a class="history-back" href="{{ url_for('home') }}">回到今天這段 →</a>
+  </header>
+
+  {% if reflections %}
+  <div class="feed-header">
+    <p class="feed-title">共 {{ reflections|length }} 則</p>
+    <select class="feed-sort" data-sort-nav aria-label="排序方式">
+      <option value="{{ url_for('my_reflections', sort='desc') }}"{{ ' selected' if sort == 'desc' else '' }}>新到舊</option>
+      <option value="{{ url_for('my_reflections', sort='asc') }}"{{ ' selected' if sort == 'asc' else '' }}>舊到新</option>
+    </select>
+  </div>
+  {% else %}
+  <section class="passage-card">
+    <p class="feed-empty">你還沒有留下任何領受。今天這段讀讀看？</p>
+    <a class="btn btn--ghost" href="{{ url_for('home') }}">回到今天這段</a>
+  </section>
+  {% endif %}
+
+  {% for r in reflections %}
+  <section class="passage-card my-reflection">
+    <p class="my-reflection__ref">
+      {% if r.passage_date == today %}今天{% else %}{{ r.passage_date }}{% endif %} · {{ r.reference }}
+    </p>
+
+    {% for vi in r.verse_indexes %}
+      {% if vi < r.verses|length %}
+      <p class="feed-item__verse">
+        {% if r.verse_labels and r.verse_labels[vi] %}<span class="feed-item__verse-num">{{ r.verse_labels[vi] }}</span>{% endif %}
+        「{{ r.verses[vi] }}」
+      </p>
+      {% endif %}
+    {% endfor %}
+
+    {% if r.note and r.note.strip() %}
+    <p class="feed-item__note">{{ r.note }}</p>
+    {% elif r.verse_indexes %}
+    <p class="feed-item__note feed-item__note--empty">你在這幾句停下了腳步，沒有多寫什麼</p>
+    {% else %}
+    <p class="feed-item__note feed-item__note--empty">你讀了這段</p>
+    {% endif %}
+
+    {% if r.reactions %}
+    <div class="feed-item__reactions-list">
+      {% for reaction in r.reactions %}
+      <p class="feed-item__reaction-line">{{ reaction_kinds[reaction.kind].emoji }} {{ '你' if reaction.mine else reaction.name }}{{ reaction_kinds[reaction.kind].phrase }}</p>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="my-reflection__actions">
+      {% if not is_muted %}
+      <a class="feed-item__edit" href="{{ url_for('edit_reflection', reflection_id=r.id, next=url_for('my_reflections', sort=sort)) }}">編輯</a>
+      {% endif %}
+      <a class="my-reflection__jump" href="{{ url_for('history_day', passage_date=r.passage_date) }}">看那天大家怎麼讀 →</a>
+    </div>
+  </section>
+  {% endfor %}
+
+</div>
+{% endblock %}

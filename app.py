@@ -28,6 +28,7 @@ from data_store import (  # noqa: E402
     delete_reflection,
     export_passage,
     get_member_by_line_id,
+    get_my_reflections,
     get_passage_by_date,
     get_passage_by_id,
     get_reactions_for_passage,
@@ -331,6 +332,27 @@ def edit_reflection(reflection_id):
         verses=list(enumerate(passage["verses"])),
         selected_text=selected_text,
         next_url=next_url,
+    )
+
+
+@app.route("/me")
+@login_required
+def my_reflections():
+    """我的領受：自己留過的所有領受收在一頁，每一則附上當時是哪段經文，
+    不用一天一天點日曆翻。這不是進度條、不是打卡——就只是把自己的收在一起。"""
+    my_member_id = _current_member_id()
+    sort = _sort_param()
+    reflections = get_my_reflections(my_member_id, sort=sort)
+    # 附上別人給我的領受的反應（看見誰被自己的領受鼓勵到，是溫暖的）。
+    reactions_by = get_reactions_for_passage([r["id"] for r in reflections], my_member_id)
+    for r in reflections:
+        r["reactions"] = reactions_by.get(r["id"], [])
+    return render_template(
+        "my_reflections.html",
+        reflections=reflections,
+        sort=sort,
+        is_muted=_current_member_is_muted(),
+        today=local_time.today().isoformat(),
     )
 
 

@@ -490,6 +490,68 @@ def get_reflections(passage_id: str, my_member_id: str | None = None, sort: str 
     return items
 
 
+def _shape_verse_indexes(row: dict) -> list[int]:
+    """新欄位 verse_indexes 優先，沒有就從舊的單一 verse_index 退回成單元素陣列。"""
+    return row.get("verse_indexes") or ([row["verse_index"]] if row.get("verse_index") is not None else [])
+
+
+def get_my_reflections(member_id: str, sort: str = "desc") -> list[dict]:
+    """某個人自己留過的所有領受（跨所有經文），每一則都附上當時是哪一段經文。
+    給「我的領受」個人回顧頁用——不用一天一天點日曆翻。
+    """
+    if member_id is None:
+        return []
+
+    if _demo_mode():
+        mine = [r for r in _demo_reflections if r["member_id"] == member_id]
+        p = _demo_passage or {}
+        items = [
+            {
+                "id": r["id"],
+                "passage_id": p.get("id"),
+                "passage_date": p.get("passage_date") or local_time.today().isoformat(),
+                "reference": p.get("reference", ""),
+                "verses": p.get("verses", []),
+                "verse_labels": p.get("verse_labels"),
+                "verse_indexes": r.get("verse_indexes") or [],
+                "note": r.get("note", ""),
+                "kind": r.get("kind", "flower"),
+                "color": r.get("color", "#EFC26B"),
+            }
+            for r in mine
+        ]
+        if sort == "desc":
+            items.reverse()
+        return items
+
+    # 一次把當時那段經文一起帶出來（reflections.passage_id → daily_passages）。
+    result = (
+        sb.table("reflections")
+        .select("*, daily_passages(id, passage_date, reference, verses, verse_labels)")
+        .eq("member_id", member_id)
+        .order("created_at", desc=(sort == "desc"))
+        .execute()
+    )
+    items = []
+    for r in result.data:
+        p = r.get("daily_passages") or {}
+        items.append(
+            {
+                "id": r["id"],
+                "passage_id": p.get("id"),
+                "passage_date": p.get("passage_date"),
+                "reference": p.get("reference", ""),
+                "verses": p.get("verses", []),
+                "verse_labels": p.get("verse_labels"),
+                "verse_indexes": _shape_verse_indexes(r),
+                "note": r.get("note", ""),
+                "kind": r.get("kind", "flower"),
+                "color": r.get("color", "#EFC26B"),
+            }
+        )
+    return items
+
+
 def get_reflection_by_id(reflection_id: str) -> dict | None:
     """編輯領受用：拿單一則領受的原始資料（不含 name/mine 這些畫面加工過的欄位）。"""
     if _demo_mode():
