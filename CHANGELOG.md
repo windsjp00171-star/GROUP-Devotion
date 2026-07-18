@@ -2,6 +2,44 @@
 
 本文件記錄 GROUP-Devotion 的重要變更，時間由新到舊排列。
 
+## [Unreleased] - 2026-07-20（資安檢查後）
+
+### 資安修正
+- **正式部署安全保險（fail-fast）**：接了 Supabase（碰真實資料）卻還在用預設
+  `FLASK_SECRET_KEY` 就拒絕啟動——否則 session cookie 可被偽造、任何人都能假冒管理員。
+  在 Railway 上跑卻開著 `FLASK_DEBUG=1`（會開放 /dev/login 免密碼登入）也拒絕啟動。
+  用 `RAILWAY_*` 環境變數判斷「是不是真的正式站」，不會誤擋「開發者在本機接正式 DB
+  ＋開 debug 測試」的流程。
+- **session cookie 加固**：`HttpOnly` + `SameSite=Lax` + `Secure`（正式站 HTTPS 才開，
+  本機 http 測試自動關）。
+- **CSV 公式注入防護**：`/export/csv` 的暱稱、領受內容若以 `= + - @` 開頭，前面補單引號，
+  避免輔導用 Excel 打開匯出檔時被當公式執行。
+
+### 修正
+- **`.env` 載入順序 bug**：`load_dotenv()` 原本在 `import auth` 之後才呼叫，但 auth 在
+  import 當下就讀 `os.environ`（LINE 憑證、`ADMIN_LINE_USER_IDS`、`FLASK_DEBUG`），
+  導致本機靠 `.env` 跑時這些值靜默失效（/dev/login、LINE 登入、管理員名單都讀不到）。
+  把 `load_dotenv()` 移到所有會讀環境變數的 import 之前。正式站的環境變數是平台注入的，
+  不受影響——這個 bug 只影響本機。
+
+### 決定不做
+- 禁言不擋「反應」：禁言的目的是不讓敏感／不當**文字**繼續發生，貼圖反應是固定選項、
+  沒有自由文字，跟這個目的不衝突，所以維持可用。
+- 多小組分組：目前所有人同一組，之後真的需要再做（後端工程量大）。
+
+## [Unreleased] - 2026-07-20（功能）
+
+### 新增／調整
+- 固定反應多加了幾種：🙏 想為你禱告、🌱 謝謝你的分享、💫 也被觸動了、🕊️ 跟你一起阿們
+  （原本 3 種變 7 種）。反應合法值改成一律由 `data_store.REACTION_KINDS` 把關，資料庫端
+  拿掉 CHECK 限制，以後想加新反應不用再跑 migration。
+- 動態牆的排序從連結式改成下拉選單（`<select>`），選了就跳到對應排序。
+
+### 資料庫異動（需要手動到 Supabase SQL Editor 執行，見 README）
+- `alter table reflection_reactions drop constraint if exists reflection_reactions_kind_check;`
+  （拿掉舊的 CHECK，讓新反應種類能存進去）。migration 沒跑之前，選新種類的反應會安靜
+  地存不進去（不會 500，`set_reaction` 有接住 23514），選舊三種照常運作。
+
 ## [Unreleased] - 2026-07-19（凌晨後）
 
 ### 新增：禁言（不是封鎖）

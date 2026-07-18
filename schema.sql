@@ -69,9 +69,10 @@ create table if not exists reflection_reactions (
   id uuid primary key default gen_random_uuid(),
   reflection_id uuid not null references reflections(id) on delete cascade,
   member_id uuid not null references members(id) on delete cascade,
-  -- 固定的幾種反應，各自對應一句寫死的鼓勵語（見 data_store.REACTION_KINDS），
-  -- 不是自由留言——怕自由留言在青少年小組的靈修內容底下容易引發論戰。
-  kind text not null check (kind in ('resonate', 'comfort', 'light')),
+  -- 固定的幾種反應，各自對應一句寫死的鼓勵語（合法值以 data_store.REACTION_KINDS
+  -- 為準，set_reaction 會擋掉名單外的 kind）。刻意不在這裡加 CHECK 限制——之後想加
+  -- 新的反應就不用每次都跑一次 migration 改 CHECK。不是自由留言，怕引發論戰。
+  kind text not null,
   created_at timestamptz not null default now(),
   -- 一人對一則領受只能留一種反應，可以換，不會同時掛好幾個。
   unique (reflection_id, member_id)

@@ -16,10 +16,16 @@ DEFAULT_GUIDING_QUESTION = "哪一句話，也讓你想停下腳步？"
 
 # 對別人領受的反應，固定幾種、各自對應一句寫死的鼓勵語，不是自由留言——
 # 自由留言在青少年小組的靈修內容底下風險較高，怕不小心引發論戰。
+# 之後想加新的反應，只要在這裡多一組就好，資料庫端不再有 CHECK 限制卡著
+# （合法值一律以這份 dict 為準，set_reaction 會擋掉不在名單裡的 kind）。
 REACTION_KINDS = {
     "resonate": {"emoji": "🌼", "phrase": "也很有共鳴"},
     "comfort": {"emoji": "💛", "phrase": "覺得很安慰"},
     "light": {"emoji": "✨", "phrase": "也被光照到"},
+    "pray": {"emoji": "🙏", "phrase": "想為你禱告"},
+    "thankful": {"emoji": "🌱", "phrase": "謝謝你的分享"},
+    "moved": {"emoji": "💫", "phrase": "也被觸動了"},
+    "amen": {"emoji": "🕊️", "phrase": "跟你一起阿們"},
 }
 
 # 真人送出的領受目前一律長成花（圖鑑式的花／果／蝶／石分類是北極星文件明訂的
@@ -588,8 +594,11 @@ def set_reaction(reflection_id: str, member_id: str, kind: str | None) -> None:
                 {"reflection_id": reflection_id, "member_id": member_id, "kind": kind},
                 on_conflict="reflection_id,member_id",
             ).execute()
-    except Exception as exc:  # noqa: BLE001 - 表還沒手動建好（migration 還沒跑）就安靜放棄
-        if getattr(exc, "code", None) != "PGRST205":
+    except Exception as exc:  # noqa: BLE001 - migration 還沒跑完就安靜放棄，不要 500
+        # PGRST205 = 表還沒建好；23514 = 舊的 CHECK 限制還在、擋掉新加的反應種類
+        # （drop constraint 那條 migration 還沒跑）。兩種都是過渡狀態，反應是錦上添花，
+        # 放棄這次寫入好過整頁 500——migration 跑完就正常了。
+        if getattr(exc, "code", None) not in ("PGRST205", "23514"):
             raise
 
 

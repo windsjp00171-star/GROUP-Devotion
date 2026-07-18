@@ -1,19 +1,27 @@
 import os
-from calendar import monthrange
-from datetime import date, datetime
-import csv
-import io
-import json
 
-import openpyxl
 from dotenv import load_dotenv
-from flask import Flask, Response, redirect, render_template, request, send_from_directory, url_for
 
-import ai_guide
-import local_time
-from auth import auth_bp, admin_required, env_admin_required, get_user, is_admin, is_env_admin, login_required, require_login
-from csrf import csrf_protect, csrf_token
-from data_store import (
+# 一定要在 import auth / ai_guide 之前呼叫：那些模組在 import 的當下就直接讀 os.environ
+# （LINE 憑證、ADMIN_LINE_USER_IDS、FLASK_DEBUG…），晚一步 load_dotenv 就讀不到 .env
+# 的值了。正式站的環境變數是平台直接注入的，不受這個順序影響；這行主要是修好本機
+# 靠 .env 跑的情況（否則 /dev/login、LINE 登入、管理員名單在本機會靜默失效）。
+load_dotenv()
+
+from calendar import monthrange  # noqa: E402
+from datetime import date, datetime  # noqa: E402
+import csv  # noqa: E402
+import io  # noqa: E402
+import json  # noqa: E402
+
+import openpyxl  # noqa: E402
+from flask import Flask, Response, redirect, render_template, request, send_from_directory, url_for  # noqa: E402
+
+import ai_guide  # noqa: E402
+import local_time  # noqa: E402
+from auth import auth_bp, admin_required, env_admin_required, get_user, is_admin, is_env_admin, login_required, require_login  # noqa: E402
+from csrf import csrf_protect, csrf_token  # noqa: E402
+from data_store import (  # noqa: E402
     DEFAULT_GUIDING_QUESTION,
     REACTION_KINDS,
     add_my_reflection,
@@ -37,13 +45,42 @@ from data_store import (
     set_today_passage,
     update_reflection,
 )
-from plan_import import parse_plan_file
-from scripture import BOOK_NAMES, get_scripture_with_labels, resolve_book_chapter
-
-load_dotenv()
+from plan_import import parse_plan_file  # noqa: E402
+from scripture import BOOK_NAMES, get_scripture_with_labels, resolve_book_chapter  # noqa: E402
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "dev-only-not-for-production")
+
+# --- 正式部署的安全保險 ---
+# 「有接 Supabase」＝ 碰的是真實資料（不管是 Railway 正式站，還是開發者在本機接
+# 正式 DB 測試）。這種情況下還在用預設 secret key，session cookie 就能被偽造、
+# 任何人都能假冒成管理員——直接拒絕啟動，不要帶著這個洞碰真實資料。
+_REAL_DEPLOYMENT = bool(os.environ.get("SUPABASE_URL"))
+_DEBUG = os.environ.get("FLASK_DEBUG", "").strip() == "1"
+# 「在 Railway 上跑」＝ 真的對外的正式站（Railway runtime 會注入 RAILWAY_* 環境變數）。
+# 用這個判斷「是不是正式站」，而不是「有沒有接 Supabase」——後者會把「開發者在本機
+# 接正式 DB＋開 FLASK_DEBUG 測試」也誤判成正式站，把本機測試流程整個擋掉。
+_ON_RAILWAY = any(k.startswith("RAILWAY_") for k in os.environ)
+
+if _REAL_DEPLOYMENT and app.secret_key == "dev-only-not-for-production":
+    raise RuntimeError(
+        "偵測到已接 Supabase（碰的是真實資料）但 FLASK_SECRET_KEY 還是預設值——"
+        "請先在環境變數設一組長隨機字串再啟動，否則 session 可被偽造、任何人都能假冒管理員。"
+    )
+if _ON_RAILWAY and _DEBUG:
+    raise RuntimeError(
+        "偵測到在 Railway 正式站上跑，但 FLASK_DEBUG=1——"
+        "正式站開 debug 會開放 /dev/login 免密碼登入，請把 FLASK_DEBUG 設成 0。"
+    )
+
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    # 開 debug（本機測試）時關掉 Secure，不然 http 下 cookie 不會送出、登不進去；
+    # 正式站 FLASK_DEBUG=0（且被上面的保險強制）＋全程 HTTPS，Secure 就會是 True。
+    SESSION_COOKIE_SECURE=not _DEBUG,
+)
+
 app.register_blueprint(auth_bp)
 app.before_request(csrf_protect)
 
@@ -92,6 +129,16 @@ def _current_member_is_muted() -> bool:
 
 def _sort_param() -> str:
     return "desc" if request.args.get("sort") == "desc" else "asc"
+
+
+def _csv_safe(value) -> str:
+    """CSV 公式注入（formula injection）防護：儲存格若以 = + - @ 或 tab/換行開頭，
+    Excel／Google Sheets 打開時會把它當公式執行。前面補一個單引號讓它一律被當純文字。
+    暱稱、領受內容都是使用者自己打的，匯出檔又是設計給輔導下載打開的，一定要擋。"""
+    text = "" if value is None else str(value)
+    if text and text[0] in ("=", "+", "-", "@", "\t", "\r"):
+        return "'" + text
+    return text
 
 
 def _with_reactions(reflections: list[dict], my_member_id: str | None) -> list[dict]:
@@ -538,7 +585,7 @@ def export(fmt):
         writer.writerow(["name", "verse", "note"])
         for r in data["reflections"]:
             verse = "／".join(data["passage"]["verses"][i] for i in r["verse_indexes"])
-            writer.writerow([r["name"], verse, r["note"]])
+            writer.writerow([_csv_safe(r["name"]), _csv_safe(verse), _csv_safe(r["note"])])
         return Response(
             buf.getvalue(),
             mimetype="text/csv",

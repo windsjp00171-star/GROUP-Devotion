@@ -4,7 +4,17 @@
 document.addEventListener('DOMContentLoaded', () => {
   initVerseMarking();
   initSubmitFeedback();
+  initSortSelect();
 });
+
+function initSortSelect() {
+  // 排序下拉選單：選了就直接跳到那個排序的網址（option 的 value 就是目標網址）。
+  document.querySelectorAll('[data-sort-nav]').forEach((select) => {
+    select.addEventListener('change', () => {
+      if (select.value) window.location.href = select.value;
+    });
+  });
+}
 
 function initVerseMarking() {
   // 每一句的標記是各自獨立切換的，不是「點新的一句就取消舊的」——

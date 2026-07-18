@@ -127,6 +127,11 @@ create table if not exists reflection_reactions (
 );
 create index if not exists idx_reflection_reactions_reflection on reflection_reactions (reflection_id);
 alter table reflection_reactions enable row level security;
+
+-- 2026-07-20：反應種類多加了幾種（🙏 想為你禱告／🌱 謝謝你的分享／💫 也被觸動了／
+-- 🕊️ 跟你一起阿們）。原本的 CHECK 只認得舊的三種，會擋掉新的，直接把 CHECK 拿掉，
+-- 合法值改成一律由程式端（data_store.REACTION_KINDS）把關，以後加新反應不用再改資料庫。
+alter table reflection_reactions drop constraint if exists reflection_reactions_kind_check;
 ```
 
 到 Supabase 專案的 SQL Editor 貼上執行一次就好，既有資料不受影響。
