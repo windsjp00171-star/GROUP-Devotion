@@ -268,15 +268,6 @@ body {
   100% { transform: scale(1); }
 }
 
-.verse-static {
-  font-family: var(--font-serif);
-  font-size: 17px;
-  line-height: 2.1;
-  color: var(--color-ink);
-  margin: 0 0 2px;
-  padding: 3px 10px 3px 8px;
-}
-
 .verse-num {
   font-family: var(--font-ui);
   font-size: 11px;

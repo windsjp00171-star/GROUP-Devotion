@@ -264,7 +264,6 @@ def _resolve_guiding_question(passage: dict) -> dict:
     passage["guiding_question"] = question
 
     if _demo_mode():
-        global _demo_passage
         if _demo_passage and _demo_passage.get("id") == passage.get("id"):
             _demo_passage["guiding_question"] = question
     else:
