@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}編輯領受{% endblock %}
+{% block tour_key %}edit{% endblock %}
+
+{% block content %}
+<div class="screen">
+
+  <header class="home-header">
+    <a class="history-back" href="{{ next_url or url_for('home') }}">← 返回</a>
+    <h1>編輯這則領受</h1>
+  </header>
+
+  <section class="passage-card">
+    <p class="passage-ref">{{ passage.reference }}</p>
+
+    <div class="passage-text" id="passage-text">
+      {% for index, verse in verses %}
+      <p class="verse{{ ' verse--marked' if index in reflection.verse_indexes else '' }}" data-verse-index="{{ index }}">
+        {% if passage.verse_labels and passage.verse_labels[index] %}<span class="verse-num">{{ passage.verse_labels[index] }}</span>{% endif %}
+        {{ verse }}
+      </p>
+      {% endfor %}
+    </div>
+
+    <form class="reflection-form" method="post" action="{{ url_for('edit_reflection', reflection_id=reflection.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {% if next_url %}
+      <input type="hidden" name="next" value="{{ next_url }}">
+      {% endif %}
+      <input type="hidden" name="verse_indexes" id="verse-index-input" value="{{ reflection.verse_indexes | join(',') }}">
+      <p class="selected-verse" id="selected-verse"{{ '' if reflection.verse_indexes else ' hidden' }}>
+        <span class="selected-verse__label">針對這幾句</span>
+        <span class="selected-verse__text" id="selected-verse-text">{{ selected_text }}</span>
+        <button type="button" class="selected-verse__clear" id="selected-verse-clear" aria-label="取消標記">×</button>
+      </p>
+      <textarea name="note" placeholder="想多寫一點點也可以…">{{ reflection.note or '' }}</textarea>
+      <button type="submit" class="btn btn--primary">儲存修改</button>
+    </form>
+  </section>
+
+</div>
+{% endblock %}

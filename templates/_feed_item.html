@@ -1,0 +1,53 @@
+{# 單一則領受的卡片，首頁動態牆、回顧的歷史動態牆共用，改一個地方兩邊都會更新。
+   需要呼叫端在迴圈裡提供 r（領受）、passage；is_first_reflection=true 才會加聚焦導覽的屬性
+   （不是在這裡用 loop.first——include 進來的模板拿不到外層迴圈的 loop 變數）。 #}
+<div class="feed-item{{ ' feed-item--mine' if r.mine else '' }}"
+     {% if is_first_reflection %}data-tour-step="7" data-tour-text="每一則都是小組裡真的有人在這段經文停下的地方。"{% endif %}>
+  <span class="feed-item__mark mark mark--{{ r.kind }}" style="--mark-color:{{ r.color }}" aria-hidden="true">
+    {% if r.kind == 'flower' %}
+      <span class="mark__petal mark__petal--t"></span>
+      <span class="mark__petal mark__petal--b"></span>
+      <span class="mark__petal mark__petal--l"></span>
+      <span class="mark__petal mark__petal--r"></span>
+      <span class="mark__center"></span>
+    {% elif r.kind == 'fruit' %}
+      <span class="mark__stem"></span>
+      <span class="mark__body"></span>
+    {% elif r.kind == 'butterfly' %}
+      <span class="mark__wing mark__wing--l"></span>
+      <span class="mark__wing mark__wing--r"></span>
+      <span class="mark__antenna"></span>
+    {% elif r.kind == 'stone' %}
+      <span class="mark__rock"></span>
+      <span class="mark__shine"></span>
+    {% endif %}
+  </span>
+  <div class="feed-item__body">
+    <p class="feed-item__name">{{ '你' if r.mine else r.name }}</p>
+    {% for vi in r.verse_indexes %}
+    <p class="feed-item__verse">
+      {% if passage.verse_labels and passage.verse_labels[vi] %}<span class="feed-item__verse-num">{{ passage.verse_labels[vi] }}</span>{% endif %}
+      「{{ passage.verses[vi] }}」
+    </p>
+    {% endfor %}
+    {% if r.note and r.note.strip() %}
+    <p class="feed-item__note">{{ r.note }}</p>
+    {% elif r.verse_indexes %}
+    <p class="feed-item__note feed-item__note--empty">{{ '你' if r.mine else r.name }} 也在這幾句停下了腳步，沒有多寫什麼</p>
+    {% else %}
+    <p class="feed-item__note feed-item__note--empty">{{ '你' if r.mine else r.name }} 也讀了這段</p>
+    {% endif %}
+
+    {% if r.mine %}
+    <a class="feed-item__edit" href="{{ url_for('edit_reflection', reflection_id=r.id, next=request.path) }}">編輯</a>
+    {% endif %}
+  </div>
+  {% if current_user_is_admin %}
+  <form class="feed-item__remove-form" method="post" action="{{ url_for('admin_delete_reflection', reflection_id=r.id) }}"
+        onsubmit="return confirm('移除這則領受？當事人不會收到通知。');">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="{{ request.path }}">
+    <button type="submit" class="feed-item__remove" aria-label="移除這則領受">×</button>
+  </form>
+  {% endif %}
+</div>

@@ -124,6 +124,34 @@ def _upsert_with_fallback(table: str, payload: dict | list[dict], on_conflict: s
         return sb.table(table).upsert(trimmed, on_conflict=on_conflict).execute()
 
 
+def _insert_reflection_with_fallback(payload: dict):
+    """留一則新的領受。跟 _upsert_with_fallback 一樣，欄位還沒手動加好就拿掉重試。
+
+    另外處理一種過渡狀態：如果「拿掉 (passage_id, member_id) 唯一限制」那個 migration
+    還沒手動跑過，資料庫還是只准一人一段經文一則，這裡 insert 第二則會被舊限制擋下來
+    （code 23505 unique_violation）——退化成 upsert（蓋掉舊的那一則），好過整個請求
+    500；等 migration 真的跑過，才會變成真正可以留好幾則不同時間點的領受。
+    """
+    optional_keys = ["verse_indexes"]
+    try:
+        return sb.table("reflections").insert(payload).execute()
+    except Exception as exc:  # noqa: BLE001 - 只在明確認得出的錯誤才重試，其他錯誤照樣往外丟
+        message = getattr(exc, "message", None) or str(exc)
+        code = getattr(exc, "code", None)
+
+        if code == "PGRST204":
+            missing = [k for k in optional_keys if f"'{k}'" in message]
+            if not missing:
+                raise
+            trimmed = {k: v for k, v in payload.items() if k not in missing}
+            return _insert_reflection_with_fallback(trimmed)
+
+        if code == "23505":
+            return sb.table("reflections").upsert(payload, on_conflict="passage_id,member_id").execute()
+
+        raise
+
+
 # ---------- group ----------
 
 
@@ -395,16 +423,21 @@ def get_passage_by_date(passage_date: str) -> dict | None:
 # ---------- 領受 ----------
 
 
-def get_reflections(passage_id: str, my_member_id: str | None = None) -> list[dict]:
-    """回傳這段經文下所有人的領受，附上 mine（是不是目前這個人自己留的）。"""
+def get_reflections(passage_id: str, my_member_id: str | None = None, sort: str = "asc") -> list[dict]:
+    """回傳這段經文下所有人的領受，附上 mine（是不是目前這個人自己留的）。
+    sort 只有時間新舊兩種（'asc' 舊到新、'desc' 新到舊）——不是排行榜，
+    不會有「誰的領受比較多」這種排序，純粹是瀏覽順序的偏好。
+    """
     if _demo_mode():
         items = list(_demo_reflections)
+        if sort == "desc":
+            items = list(reversed(items))
     else:
         result = (
             sb.table("reflections")
             .select("*, members(display_name, nickname)")
             .eq("passage_id", passage_id)
-            .order("created_at")
+            .order("created_at", desc=(sort == "desc"))
             .execute()
         )
         items = [
@@ -428,24 +461,18 @@ def get_reflections(passage_id: str, my_member_id: str | None = None) -> list[di
     return items
 
 
-def get_my_reflection(passage_id: str, member_id: str) -> dict | None:
+def get_reflection_by_id(reflection_id: str) -> dict | None:
+    """編輯領受用：拿單一則領受的原始資料（不含 name/mine 這些畫面加工過的欄位）。"""
     if _demo_mode():
-        return next((r for r in _demo_reflections if r["member_id"] == member_id), None)
-
-    result = (
-        sb.table("reflections")
-        .select("*")
-        .eq("passage_id", passage_id)
-        .eq("member_id", member_id)
-        .limit(1)
-        .execute()
-    )
+        return next((r for r in _demo_reflections if r["id"] == reflection_id), None)
+    result = sb.table("reflections").select("*").eq("id", reflection_id).limit(1).execute()
     return result.data[0] if result.data else None
 
 
 def add_my_reflection(passage_id: str, member_id: str, verse_indexes: list[int] | None, note: str) -> dict:
-    """留一句領受，或只是登記「我也讀了」（verse_indexes 是 None 或空陣列）。
-    可以同時針對好幾句經文，不是只能選一句。已經留過的話就更新內容，不會重複長出第二朵花。
+    """留一則新的領受，可以同時針對好幾句經文。同一段經文可以留好幾則不同時間點的
+    領受，不會因為留過一次就被鎖住——回頭重讀有新的感動，本來就可以再留一則，
+    不是只能編輯同一則（想改舊的那則的話，見 update_reflection）。
     """
     verse_indexes = list(verse_indexes) if verse_indexes else None
     payload = {
@@ -461,18 +488,41 @@ def add_my_reflection(passage_id: str, member_id: str, verse_indexes: list[int] 
     }
 
     if _demo_mode():
-        existing = next((r for r in _demo_reflections if r["member_id"] == member_id), None)
-        if existing:
-            existing.update(verse_indexes=verse_indexes, note=note)
-            return existing
         reflection = {"id": str(uuid.uuid4()), "name": "你", **payload}
         _demo_reflections.append(reflection)
         return reflection
 
-    result = _upsert_with_fallback(
-        "reflections", payload, on_conflict="passage_id,member_id", optional_keys=["verse_indexes"]
-    )
+    result = _insert_reflection_with_fallback(payload)
     return result.data[0]
+
+
+def update_reflection(reflection_id: str, member_id: str, verse_indexes: list[int] | None, note: str) -> None:
+    """編輯自己留過的某一則領受（改內容，不是留新的一則）。用 member_id 一起篩，
+    確保只能改到自己那則，就算表單被竄改也一樣。
+    """
+    verse_indexes = list(verse_indexes) if verse_indexes else None
+    payload = {
+        "verse_index": verse_indexes[0] if verse_indexes else None,
+        "verse_indexes": verse_indexes,
+        "note": note,
+    }
+
+    if _demo_mode():
+        existing = next(
+            (r for r in _demo_reflections if r["id"] == reflection_id and r["member_id"] == member_id), None
+        )
+        if existing:
+            existing.update(verse_indexes=verse_indexes, note=note)
+        return
+
+    try:
+        sb.table("reflections").update(payload).eq("id", reflection_id).eq("member_id", member_id).execute()
+    except Exception as exc:  # noqa: BLE001 - 只在明確是「欄位不存在」時重試
+        message = getattr(exc, "message", None) or str(exc)
+        if getattr(exc, "code", None) != "PGRST204" or "'verse_indexes'" not in message:
+            raise
+        trimmed = {k: v for k, v in payload.items() if k != "verse_indexes"}
+        sb.table("reflections").update(trimmed).eq("id", reflection_id).eq("member_id", member_id).execute()
 
 
 def delete_reflection(reflection_id: str) -> None:
@@ -487,13 +537,15 @@ def delete_reflection(reflection_id: str) -> None:
 
 def export_passage(passage_id: str) -> dict:
     """Rule 14：一鍵匯出這段經文的所有領受。"""
-    passage = get_today_passage() if _demo_mode() else _find_passage(passage_id)
     return {
-        "passage": passage,
+        "passage": get_passage_by_id(passage_id),
         "reflections": get_reflections(passage_id),
     }
 
 
-def _find_passage(passage_id: str) -> dict | None:
+def get_passage_by_id(passage_id: str) -> dict | None:
+    """用 id 直接拿一段經文（不限今天）——編輯領受、匯出都要知道自己是針對哪一段。"""
+    if _demo_mode():
+        return _demo_passage if _demo_passage and _demo_passage.get("id") == passage_id else None
     result = sb.table("daily_passages").select("*").eq("id", passage_id).limit(1).execute()
     return result.data[0] if result.data else None

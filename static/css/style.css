@@ -320,6 +320,12 @@ body {
   color: var(--color-muted);
 }
 
+.already-count-hint {
+  margin: 10px 2px 0;
+  font-size: 12px;
+  color: var(--color-accent);
+}
+
 .selected-verse {
   display: flex;
   align-items: flex-start;
@@ -583,11 +589,37 @@ body {
   scroll-margin-top: 20px;
 }
 
-.feed-title {
+.feed-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
   margin: 8px 0 0;
+}
+
+.feed-title {
+  margin: 0;
   font-size: 13px;
   font-weight: 700;
   color: var(--color-label);
+}
+
+.feed-sort {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.feed-sort__link {
+  font-size: 11px;
+  color: var(--color-muted);
+  text-decoration: none;
+}
+
+.feed-sort__link--active {
+  color: var(--color-accent);
+  font-weight: 700;
+  text-decoration: underline;
 }
 
 .feed-empty {
@@ -658,6 +690,14 @@ body {
 .feed-item__note--empty {
   font-size: 13px;
   color: var(--color-muted);
+}
+
+.feed-item__edit {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--color-accent);
+  text-decoration: none;
 }
 
 .feed-item__remove-form {
@@ -925,12 +965,6 @@ body {
   margin: 14px 0 0;
   font-size: 12px;
   color: var(--color-muted);
-}
-
-.history-marked-hint {
-  margin: 14px 0 0;
-  font-size: 13px;
-  color: var(--color-ink-soft);
 }
 
 /* ---------- 動畫 ---------- */

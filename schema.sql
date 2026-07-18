@@ -56,8 +56,9 @@ create table if not exists reflections (
   note text not null default '',
   kind text not null default 'flower' check (kind in ('flower', 'fruit', 'butterfly', 'stone')),
   color text not null default '#EFC26B',
-  created_at timestamptz not null default now(),
-  unique (passage_id, member_id)
+  created_at timestamptz not null default now()
+  -- 沒有 unique (passage_id, member_id)：同一段經文可以留好幾則不同時間點的領受，
+  -- 不會因為留過一次就被鎖住——回頭重讀有新的感動，本來就可以再留一則。
 );
 
 create index if not exists idx_members_group on members (group_id);

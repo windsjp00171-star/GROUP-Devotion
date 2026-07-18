@@ -20,6 +20,8 @@ from data_store import (
     export_passage,
     get_member_by_line_id,
     get_passage_by_date,
+    get_passage_by_id,
+    get_reflection_by_id,
     get_reflections,
     get_today_passage,
     import_passages,
@@ -29,6 +31,7 @@ from data_store import (
     set_nickname,
     set_passage_for_date,
     set_today_passage,
+    update_reflection,
 )
 from plan_import import parse_plan_file
 from scripture import BOOK_NAMES, get_scripture_with_labels, resolve_book_chapter
@@ -70,6 +73,10 @@ def _current_member_id():
         return None
     member = get_member_by_line_id(get_user()["line_user_id"])
     return member["id"] if member else None
+
+
+def _sort_param() -> str:
+    return "desc" if request.args.get("sort") == "desc" else "asc"
 
 
 @app.route("/healthz")
@@ -124,15 +131,17 @@ def home():
         return render_template("no_passage.html")
 
     my_member_id = _current_member_id()
-    reflections = get_reflections(passage["id"], my_member_id)
-    mine = next((r for r in reflections if r["mine"]), None)
+    sort = _sort_param()
+    reflections = get_reflections(passage["id"], my_member_id, sort=sort)
+    my_reflection_count = sum(1 for r in reflections if r["mine"])
 
     return render_template(
         "home.html",
         passage=passage,
         verses=list(enumerate(passage["verses"])),
         reflections=reflections,
-        submitted=mine is not None,
+        my_reflection_count=my_reflection_count,
+        sort=sort,
         bible_actionbook_url=_actionbook_deep_link(passage["reference"]),
     )
 
@@ -140,11 +149,14 @@ def home():
 @app.route("/reflections", methods=["POST"])
 @login_required
 def submit_reflection():
-    # 回顧頁的「我也讀了」：針對指定（通常是過去）的那一段經文登記已讀，
-    # 不開放在回顧頁寫領受或標記哪一句——回顧是往回看，不是回頭補作業。
+    # 回顧頁：針對指定（過去）的那一段經文留領受，可以標記好幾句、可以寫字，
+    # 跟首頁「留下我的領受」是同一件事——只是忙到今天才回來補，不代表當初沒有真的
+    # 停下來讀，回頭補的領受一樣是真的領受。
     passage_id = request.form.get("passage_id")
     if passage_id:
-        add_my_reflection(passage_id, _current_member_id(), None, "")
+        verse_indexes = [int(x) for x in request.form.get("verse_indexes", "").split(",") if x.strip().isdigit()]
+        note = (request.form.get("note") or "").strip()
+        add_my_reflection(passage_id, _current_member_id(), verse_indexes, note)
         passage_date = request.form.get("passage_date")
         if passage_date:
             return redirect(url_for("history_day", passage_date=passage_date))
@@ -177,6 +189,47 @@ def admin_delete_reflection(reflection_id):
     if next_url.startswith("/"):
         return redirect(next_url)
     return redirect(url_for("home"))
+
+
+@app.route("/reflections/<reflection_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_reflection(reflection_id):
+    """改自己留過的某一則領受，不是留新的一則——想留新的一則就直接在首頁／回顧
+    再送出一次表單，同一段經文本來就可以留好幾則。"""
+    reflection = get_reflection_by_id(reflection_id)
+    my_member_id = _current_member_id()
+    if not reflection or reflection.get("member_id") != my_member_id:
+        return redirect(url_for("home"))
+
+    passage = get_passage_by_id(reflection["passage_id"])
+    if not passage:
+        return redirect(url_for("home"))
+
+    next_url = request.values.get("next") or ""
+    if next_url and not next_url.startswith("/"):
+        next_url = ""
+
+    if request.method == "POST":
+        verse_indexes = [int(x) for x in request.form.get("verse_indexes", "").split(",") if x.strip().isdigit()]
+        note = (request.form.get("note") or "").strip()
+        update_reflection(reflection_id, my_member_id, verse_indexes, note)
+        return redirect(next_url or url_for("home"))
+
+    # 舊資料只有單一 verse_index，跟 get_reflections 一樣的退回邏輯。
+    verse_indexes = reflection.get("verse_indexes") or (
+        [reflection["verse_index"]] if reflection.get("verse_index") is not None else []
+    )
+    reflection = {**reflection, "verse_indexes": verse_indexes}
+    selected_text = "／".join(passage["verses"][i] for i in verse_indexes if i < len(passage["verses"]))
+
+    return render_template(
+        "edit_reflection.html",
+        reflection=reflection,
+        passage=passage,
+        verses=list(enumerate(passage["verses"])),
+        selected_text=selected_text,
+        next_url=next_url,
+    )
 
 
 @app.route("/history")
@@ -237,10 +290,16 @@ def history_day(passage_date):
     except ValueError:
         return redirect(url_for("history"))
 
+    today_str = local_time.today().isoformat()
     # 回顧是往回看，不是提前偷看還沒發生的排程——即使直接打網址帶未來日期也擋掉，
     # 不能只靠月曆畫面沒有連結這件事（那只是不好按到，不是真的擋住）。
-    if passage_date > local_time.today().isoformat():
+    if passage_date > today_str:
         return redirect(url_for("history"))
+
+    # 今天本來就有自己的首頁，不需要在回顧底下長出另一個長得不一樣的「今天」，
+    # 兩個網址看到同一天卻不一樣的畫面只會讓人搞混。
+    if passage_date == today_str:
+        return redirect(url_for("home"))
 
     passage = get_passage_by_date(passage_date)
     if not passage:
@@ -248,8 +307,10 @@ def history_day(passage_date):
     passage = dict(passage)
     passage["guiding_question"] = passage.get("guiding_question") or DEFAULT_GUIDING_QUESTION
 
-    reflections = get_reflections(passage["id"], _current_member_id())
-    mine = next((r for r in reflections if r["mine"]), None)
+    my_member_id = _current_member_id()
+    sort = _sort_param()
+    reflections = get_reflections(passage["id"], my_member_id, sort=sort)
+    my_reflection_count = sum(1 for r in reflections if r["mine"])
 
     return render_template(
         "history_day.html",
@@ -257,7 +318,8 @@ def history_day(passage_date):
         passage_date=passage_date,
         verses=list(enumerate(passage["verses"])),
         reflections=reflections,
-        already_marked=mine is not None,
+        my_reflection_count=my_reflection_count,
+        sort=sort,
         bible_actionbook_url=_actionbook_deep_link(passage["reference"]),
     )
 

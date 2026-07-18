@@ -93,6 +93,22 @@ alter table daily_passages add column if not exists verse_labels jsonb;
 
 -- 2026-07-19：reflections 加 verse_indexes（可以同時針對好幾句經文，不是只能選一句）
 alter table reflections add column if not exists verse_indexes int[];
+
+-- 2026-07-19（晚）：reflections 拿掉 (passage_id, member_id) 唯一限制，
+-- 同一段經文可以留好幾則不同時間點的領受，不會因為留過一次就被鎖住
+do $$
+declare
+  con record;
+begin
+  for con in
+    select conname from pg_constraint
+    where conrelid = 'reflections'::regclass
+      and contype = 'u'
+      and array_length(conkey, 1) = 2
+  loop
+    execute format('alter table reflections drop constraint %I', con.conname);
+  end loop;
+end $$;
 ```
 
 到 Supabase 專案的 SQL Editor 貼上執行一次就好，既有資料不受影響。

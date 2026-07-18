@@ -32,7 +32,10 @@
     </div>
     <p class="prompt-hint">點一句、或寫下來，都可以</p>
 
-    {% if not submitted %}
+    {% if my_reflection_count %}
+    <p class="already-count-hint">你今天已經留了 {{ my_reflection_count }} 則，重讀有新的感動一樣可以再留一則</p>
+    {% endif %}
+
     <form class="reflection-form" method="post" action="{{ url_for('submit_reflection') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="verse_indexes" id="verse-index-input" value="">
@@ -53,69 +56,24 @@
     </form>
     <a class="btn btn--ghost" href="#feed"
        data-tour-step="5" data-tour-text="還沒想好要不要寫？往下滑就能看到大家怎麼讀這段。">先看看大家怎麼讀</a>
-    {% else %}
-    <div class="submitted-banner">
-      <span class="seed-dot" aria-hidden="true"></span>
-      <p>種子留下了，謝謝你今天也在這裡</p>
-    </div>
-    <a class="btn btn--ghost" href="#feed">看看大家怎麼讀這段 ↓</a>
-    {% endif %}
   </section>
 
   <section class="feed" id="feed">
-    <p class="feed-title" data-tour-step="6" data-tour-text="這裡是小組每個人在這段經文停下的地方，不用點開，直接看得到。">同一段路上</p>
+    <div class="feed-header">
+      <p class="feed-title" data-tour-step="6" data-tour-text="這裡是小組每個人在這段經文停下的地方，不用點開，直接看得到。">同一段路上</p>
+      <div class="feed-sort">
+        <a class="feed-sort__link{{ ' feed-sort__link--active' if sort == 'asc' else '' }}" href="{{ url_for('home', sort='asc') }}#feed">舊到新</a>
+        <a class="feed-sort__link{{ ' feed-sort__link--active' if sort == 'desc' else '' }}" href="{{ url_for('home', sort='desc') }}#feed">新到舊</a>
+      </div>
+    </div>
 
     {% if not reflections %}
     <p class="feed-empty">還沒有人留下什麼，你可以是第一個。</p>
     {% endif %}
 
     {% for r in reflections %}
-    <div class="feed-item{{ ' feed-item--mine' if r.mine else '' }}"
-         {% if loop.first %}data-tour-step="7" data-tour-text="每一則都是小組裡真的有人在這段經文停下的地方。"{% endif %}>
-      <span class="feed-item__mark mark mark--{{ r.kind }}" style="--mark-color:{{ r.color }}" aria-hidden="true">
-        {% if r.kind == 'flower' %}
-          <span class="mark__petal mark__petal--t"></span>
-          <span class="mark__petal mark__petal--b"></span>
-          <span class="mark__petal mark__petal--l"></span>
-          <span class="mark__petal mark__petal--r"></span>
-          <span class="mark__center"></span>
-        {% elif r.kind == 'fruit' %}
-          <span class="mark__stem"></span>
-          <span class="mark__body"></span>
-        {% elif r.kind == 'butterfly' %}
-          <span class="mark__wing mark__wing--l"></span>
-          <span class="mark__wing mark__wing--r"></span>
-          <span class="mark__antenna"></span>
-        {% elif r.kind == 'stone' %}
-          <span class="mark__rock"></span>
-          <span class="mark__shine"></span>
-        {% endif %}
-      </span>
-      <div class="feed-item__body">
-        <p class="feed-item__name">{{ '你' if r.mine else r.name }}</p>
-        {% for vi in r.verse_indexes %}
-        <p class="feed-item__verse">
-          {% if passage.verse_labels and passage.verse_labels[vi] %}<span class="feed-item__verse-num">{{ passage.verse_labels[vi] }}</span>{% endif %}
-          「{{ passage.verses[vi] }}」
-        </p>
-        {% endfor %}
-        {% if r.note and r.note.strip() %}
-        <p class="feed-item__note">{{ r.note }}</p>
-        {% elif r.verse_indexes %}
-        <p class="feed-item__note feed-item__note--empty">{{ '你' if r.mine else r.name }} 也在這幾句停下了腳步，沒有多寫什麼</p>
-        {% else %}
-        <p class="feed-item__note feed-item__note--empty">{{ '你' if r.mine else r.name }} 也讀了這段</p>
-        {% endif %}
-      </div>
-      {% if current_user_is_admin %}
-      <form class="feed-item__remove-form" method="post" action="{{ url_for('admin_delete_reflection', reflection_id=r.id) }}"
-            onsubmit="return confirm('移除這則領受？當事人不會收到通知。');">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="next" value="{{ request.path }}">
-        <button type="submit" class="feed-item__remove" aria-label="移除這則領受">×</button>
-      </form>
-      {% endif %}
-    </div>
+    {% set is_first_reflection = loop.first %}
+    {% include "_feed_item.html" %}
     {% endfor %}
   </section>
 

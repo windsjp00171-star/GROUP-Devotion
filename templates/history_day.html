@@ -13,11 +13,14 @@
   </header>
 
   <section class="passage-card">
-    <p class="passage-ref">{{ passage.reference }}</p>
+    <div class="passage-ref-row">
+      <p class="passage-ref">{{ passage.reference }}</p>
+      <p class="tap-hint" aria-hidden="true">👆 輕點想停下的那一句</p>
+    </div>
 
-    <div class="passage-text">
+    <div class="passage-text" id="passage-text">
       {% for index, verse in verses %}
-      <p class="verse-static">
+      <p class="verse" data-verse-index="{{ index }}">
         {% if passage.verse_labels and passage.verse_labels[index] %}<span class="verse-num">{{ passage.verse_labels[index] }}</span>{% endif %}
         {{ verse }}
       </p>
@@ -28,72 +31,48 @@
       <p class="prompt-label">💭 引導問題</p>
       <p class="prompt">{{ passage.guiding_question }}</p>
     </div>
+    <p class="prompt-hint">忙到今天才回來補也沒關係，點一句、或寫下來，都可以</p>
 
-    {% if not already_marked %}
+    {% if my_reflection_count %}
+    <p class="already-count-hint">你在這段已經留了 {{ my_reflection_count }} 則，重讀有新的感動一樣可以再留一則</p>
+    {% endif %}
+
+    <form class="reflection-form" method="post" action="{{ url_for('submit_reflection') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="passage_id" value="{{ passage.id }}">
+      <input type="hidden" name="passage_date" value="{{ passage_date }}">
+      <input type="hidden" name="verse_indexes" id="verse-index-input" value="">
+      <p class="selected-verse" id="selected-verse" hidden>
+        <span class="selected-verse__label">針對這幾句</span>
+        <span class="selected-verse__text" id="selected-verse-text"></span>
+        <button type="button" class="selected-verse__clear" id="selected-verse-clear" aria-label="取消標記">×</button>
+      </p>
+      <textarea name="note" placeholder="想多寫一點點也可以…"></textarea>
+      <button type="submit" class="btn btn--primary">留下我的領受</button>
+    </form>
     <form method="post" action="{{ url_for('submit_reflection') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="passage_id" value="{{ passage.id }}">
       <input type="hidden" name="passage_date" value="{{ passage_date }}">
       <button type="submit" class="btn btn--ghost">我也讀了</button>
     </form>
-    {% else %}
-    <p class="history-marked-hint">你也讀過這段了</p>
-    {% endif %}
   </section>
 
   <section class="feed" id="feed">
-    <p class="feed-title">那天，同一段路上</p>
+    <div class="feed-header">
+      <p class="feed-title">那天，同一段路上</p>
+      <div class="feed-sort">
+        <a class="feed-sort__link{{ ' feed-sort__link--active' if sort == 'asc' else '' }}" href="{{ url_for('history_day', passage_date=passage_date, sort='asc') }}#feed">舊到新</a>
+        <a class="feed-sort__link{{ ' feed-sort__link--active' if sort == 'desc' else '' }}" href="{{ url_for('history_day', passage_date=passage_date, sort='desc') }}#feed">新到舊</a>
+      </div>
+    </div>
 
     {% if not reflections %}
     <p class="feed-empty">那天還沒有人留下什麼。</p>
     {% endif %}
 
     {% for r in reflections %}
-    <div class="feed-item{{ ' feed-item--mine' if r.mine else '' }}">
-      <span class="feed-item__mark mark mark--{{ r.kind }}" style="--mark-color:{{ r.color }}" aria-hidden="true">
-        {% if r.kind == 'flower' %}
-          <span class="mark__petal mark__petal--t"></span>
-          <span class="mark__petal mark__petal--b"></span>
-          <span class="mark__petal mark__petal--l"></span>
-          <span class="mark__petal mark__petal--r"></span>
-          <span class="mark__center"></span>
-        {% elif r.kind == 'fruit' %}
-          <span class="mark__stem"></span>
-          <span class="mark__body"></span>
-        {% elif r.kind == 'butterfly' %}
-          <span class="mark__wing mark__wing--l"></span>
-          <span class="mark__wing mark__wing--r"></span>
-          <span class="mark__antenna"></span>
-        {% elif r.kind == 'stone' %}
-          <span class="mark__rock"></span>
-          <span class="mark__shine"></span>
-        {% endif %}
-      </span>
-      <div class="feed-item__body">
-        <p class="feed-item__name">{{ '你' if r.mine else r.name }}</p>
-        {% for vi in r.verse_indexes %}
-        <p class="feed-item__verse">
-          {% if passage.verse_labels and passage.verse_labels[vi] %}<span class="feed-item__verse-num">{{ passage.verse_labels[vi] }}</span>{% endif %}
-          「{{ passage.verses[vi] }}」
-        </p>
-        {% endfor %}
-        {% if r.note and r.note.strip() %}
-        <p class="feed-item__note">{{ r.note }}</p>
-        {% elif r.verse_indexes %}
-        <p class="feed-item__note feed-item__note--empty">{{ '你' if r.mine else r.name }} 也在這幾句停下了腳步，沒有多寫什麼</p>
-        {% else %}
-        <p class="feed-item__note feed-item__note--empty">{{ '你' if r.mine else r.name }} 也讀了這段</p>
-        {% endif %}
-      </div>
-      {% if current_user_is_admin %}
-      <form class="feed-item__remove-form" method="post" action="{{ url_for('admin_delete_reflection', reflection_id=r.id) }}"
-            onsubmit="return confirm('移除這則領受？當事人不會收到通知。');">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="next" value="{{ request.path }}">
-        <button type="submit" class="feed-item__remove" aria-label="移除這則領受">×</button>
-      </form>
-      {% endif %}
-    </div>
+    {% include "_feed_item.html" %}
     {% endfor %}
   </section>
 
