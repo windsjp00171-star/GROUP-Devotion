@@ -22,7 +22,7 @@
       {% for index, verse in verses %}
       <p class="verse" data-verse-index="{{ index }}">
         {% if passage.verse_labels and passage.verse_labels[index] %}<span class="verse-num">{{ passage.verse_labels[index] }}</span>{% endif %}
-        {{ verse }}
+        <span class="verse-text">{{ verse }}</span>
       </p>
       {% endfor %}
     </div>

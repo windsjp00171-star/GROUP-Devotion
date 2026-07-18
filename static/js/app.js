@@ -35,7 +35,10 @@ function initVerseMarking() {
       hint.hidden = true;
       return;
     }
-    hintText.textContent = marked.map((v) => v.textContent.trim()).join('／');
+    // 只取經文本身（.verse-text），不要把前面的節號也塞進提示裡。
+    hintText.textContent = marked
+      .map((v) => (v.querySelector('.verse-text') || v).textContent.trim())
+      .join('／');
     hint.hidden = false;
   }
 

@@ -228,6 +228,9 @@ body {
 
 .verse {
   position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
   font-family: var(--font-serif);
   font-size: 17px;
   line-height: 2.1;
@@ -240,6 +243,13 @@ body {
   border-bottom: 1px dashed var(--color-card-border);
   -webkit-tap-highlight-color: transparent;
   transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+}
+
+/* 經文換行時，第二行以後要對齊到節號後面的文字，不要掉回節號底下——
+   用 flex 把節號當固定的第一欄、經文當會換行的第二欄，就自然是懸掛縮排。 */
+.verse-text {
+  flex: 1;
+  min-width: 0;
 }
 
 .verse:active {
@@ -269,12 +279,11 @@ body {
 }
 
 .verse-num {
+  flex-shrink: 0;
   font-family: var(--font-ui);
   font-size: 11px;
   font-weight: 700;
   color: var(--color-accent);
-  margin-right: 3px;
-  vertical-align: super;
 }
 
 .passage-text .verse:last-child {
