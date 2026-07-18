@@ -57,6 +57,9 @@
       <label class="admin-label" for="range-range">章節（例如 24:13-17，跨章可以 6:1-7:5）</label>
       <input class="admin-input" type="text" id="range-range" name="range" placeholder="24:13-17" required>
 
+      <label class="admin-label" for="range-subtitle">主題副標（選填，例如：以馬忤斯路上）</label>
+      <input class="admin-input" type="text" id="range-subtitle" name="subtitle" placeholder="留空也可以，只是幫這段取個主題">
+
       <label class="admin-label" for="range-guiding">引導問題（留空 = 這天第一次被打開時自動生一句，沒設 AI key 就用預設那句）</label>
       <input class="admin-input" type="text" id="range-guiding" name="guiding_question" placeholder="留空也可以">
 
@@ -79,29 +82,7 @@
     <a class="link-quiet" href="{{ url_for('admin_template') }}">下載空白範本</a>
   </section>
 
-  <section class="passage-card">
-    <h2 class="admin-section-title">手動貼經文（沒有這卷書，或想自己改字句時用）</h2>
-    <form class="admin-form" method="post" action="{{ url_for('admin') }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <label class="admin-label" for="reference">出處（例如：路加福音 24:13–17 · 以馬忤斯路上）</label>
-      <input class="admin-input" type="text" id="reference" name="reference" required
-             value="{{ passage.reference if passage else '' }}">
-
-      <label class="admin-label" for="verses">經文（一行一句，不要逐節切碎，一段就好）</label>
-      <textarea class="admin-textarea" id="verses" name="verses" rows="6" required>{{ (passage.verses | join('\n')) if passage else '' }}</textarea>
-
-      <label class="admin-label" for="guiding_question">引導問題（留空 = 這天第一次被打開時自動生一句）</label>
-      <input class="admin-input" type="text" id="guiding_question" name="guiding_question"
-             placeholder="哪一句話，也讓你想停下腳步？"
-             value="{{ passage.guiding_question if passage else '' }}">
-
-      <label class="admin-label" for="leader_note">你自己想先留的一句（種頭香，打開時底下就不是空的）</label>
-      <textarea class="admin-textarea" id="leader_note" name="leader_note" rows="3"
-                placeholder="例如：這句話今天特別打中我…"></textarea>
-
-      <button type="submit" class="btn btn--primary">排定今天這段</button>
-    </form>
-  </section>
+  <p class="admin-hint">經文的字句一律從和合本全文帶出來，這裡不提供「自己打經文」的選項——聖經的字句不由我們改。想加主題就用上面的「主題副標」。</p>
 
   <a class="link-quiet" href="{{ url_for('home') }}">回到今天這段</a>
 

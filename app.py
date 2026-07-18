@@ -44,7 +44,6 @@ from data_store import (  # noqa: E402
     set_nickname,
     set_passage_for_date,
     set_reaction,
-    set_today_passage,
     update_reflection,
 )
 from plan_import import parse_plan_file  # noqa: E402
@@ -474,25 +473,11 @@ def history_day(passage_date):
     )
 
 
-@app.route("/admin", methods=["GET", "POST"])
+@app.route("/admin")
 @admin_required
 def admin():
-    if request.method == "POST":
-        reference = (request.form.get("reference") or "").strip()
-        verses_raw = request.form.get("verses") or ""
-        verses = [line.strip() for line in verses_raw.splitlines() if line.strip()]
-        # 留空不在這裡打 AI——等真的被打開那天才生一次、存回去（見 data_store._resolve_guiding_question）。
-        guiding_question = (request.form.get("guiding_question") or "").strip()
-        leader_note = (request.form.get("leader_note") or "").strip()
-
-        leader_member_id = _current_member_id()
-        passage = set_today_passage(reference, verses, guiding_question, leader_member_id)
-
-        if leader_note:
-            add_my_reflection(passage["id"], leader_member_id, [0], leader_note)
-
-        return redirect(url_for("admin", saved=1))
-
+    # 刻意只有 GET：排經文一律走「書卷＋章節」或「批次匯入」，經文文字一定從和合本
+    # 全文帶出來，輔導不能自己打／改字句——聖經的字句不該被編輯。
     passage = get_today_passage()
     return render_template(
         "admin.html",
@@ -520,7 +505,12 @@ def admin_schedule_by_range():
     verse_labels = [label for label, _ in labeled]
     verses = [text for _, text in labeled]
 
+    # reference 是「出處標題」（可加主題副標），不是經文本身——經文一律是上面帶出來的
+    # 和合本全文，輔導只能加標題、不能動字句。
     reference = f"{book} {verse_range}"
+    subtitle = (request.form.get("subtitle") or "").strip()
+    if subtitle:
+        reference = f"{reference} · {subtitle}"
     guiding_question = (request.form.get("guiding_question") or "").strip()
     leader_member_id = _current_member_id()
     passage = set_passage_for_date(
