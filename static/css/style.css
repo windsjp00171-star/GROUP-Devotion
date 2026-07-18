@@ -745,18 +745,45 @@ body {
   margin-top: 10px;
 }
 
+.my-reflection__actions .feed-item__own-actions {
+  margin-top: 0;
+}
+
 .my-reflection__jump {
   font-size: 12px;
   color: var(--color-ink-soft);
   text-decoration: none;
 }
 
-.feed-item__edit {
-  display: inline-block;
+.feed-item__own-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin-top: 6px;
+}
+
+.feed-item__edit {
   font-size: 12px;
   color: var(--color-accent);
   text-decoration: none;
+}
+
+.feed-item__own-delete {
+  display: inline;
+}
+
+.feed-item__own-delete-btn {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+
+.feed-item__own-delete-btn:hover {
+  color: #A94442;
 }
 
 .feed-item__reactions-list {

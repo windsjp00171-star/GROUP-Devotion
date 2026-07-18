@@ -25,6 +25,7 @@ from data_store import (  # noqa: E402
     DEFAULT_GUIDING_QUESTION,
     REACTION_KINDS,
     add_my_reflection,
+    delete_own_reflection,
     delete_reflection,
     export_passage,
     get_member_by_line_id,
@@ -271,6 +272,18 @@ def admin_delete_reflection(reflection_id):
     """輔導移除過激或不當的領受。安靜移除，不公開標記、不通知當事人——
     這是牧養上的處理，不是公開的懲罰或公審。"""
     delete_reflection(reflection_id)
+    next_url = request.form.get("next") or ""
+    if next_url.startswith("/"):
+        return redirect(next_url)
+    return redirect(url_for("home"))
+
+
+@app.route("/reflections/<reflection_id>/remove", methods=["POST"])
+@login_required
+def delete_my_reflection(reflection_id):
+    """本人刪掉自己的領受（寫了後悔的東西可以自己收回）。禁言的人也能刪自己的——
+    移除自己的內容不是禁言要防的事（禁言防的是繼續產生新的敏感文字）。"""
+    delete_own_reflection(reflection_id, _current_member_id())
     next_url = request.form.get("next") or ""
     if next_url.startswith("/"):
         return redirect(next_url)

@@ -626,6 +626,20 @@ def delete_reflection(reflection_id: str) -> None:
     sb.table("reflections").delete().eq("id", reflection_id).execute()
 
 
+def delete_own_reflection(reflection_id: str, member_id: str) -> None:
+    """本人刪掉自己的領受（寫了後悔的東西可以自己收回）。用 member_id 一起篩，
+    就算 reflection_id 被竄改也刪不到別人的那則。"""
+    if member_id is None:
+        return
+    if _demo_mode():
+        global _demo_reflections
+        _demo_reflections = [
+            r for r in _demo_reflections if not (r["id"] == reflection_id and r["member_id"] == member_id)
+        ]
+        return
+    sb.table("reflections").delete().eq("id", reflection_id).eq("member_id", member_id).execute()
+
+
 # ---------- 反應（對某一則領受的固定反應，不是自由留言） ----------
 
 
