@@ -2,6 +2,32 @@
 
 本文件記錄 GROUP-Devotion 的重要變更，時間由新到舊排列。
 
+## [Unreleased] - 2026-07-19（凌晨後）
+
+### 新增：禁言（不是封鎖）
+輔導後台可以把某個成員禁言，只有永久管理員（`ADMIN_LINE_USER_IDS`，最高權限）能操作，
+一般輔導（`is_leader`）不行——`auth.env_admin_required`，比 `admin_required` 更嚴格。
+禁言不是封鎖帳號：還是能登入、能讀、能看動態牆，只是不能再留新的領受，也不能編輯
+舊的（不然等於繞過禁言）。首頁/回顧頁看到的不是表單，是一行安靜的提示文字，
+沒有大大的錯誤頁面告訴他「你被禁言了」。`members` 加 `is_muted` 欄位。
+
+### 新增：對領受的固定反應（不是自由留言）
+一開始做了自由留言的「回應」功能又收回（怕引發論戰），這次改成有邊界的版本：
+三種固定反應（🌼 也很有共鳴／💛 覺得很安慰／✨ 也被光照到），對應寫死的鼓勵語，
+不能自己打字。對方會看到「{名字}{鼓勵語}」這樣一行字，不是留言串。一人對一則
+領受只能留一種反應，再點同一個是取消，換一種是切換。新增 `reflection_reactions` 表。
+
+### 修正
+- 體檢時用 `pyflakes` 掃出兩個小東西：`.verse-static` 這個 CSS class 沒人用了（回顧頁
+  改成永遠可互動之後留下的死碼）、`data_store.py` 一個沒意義的 `global` 宣告，都清掉了。
+
+### 資料庫異動（需要手動到 Supabase SQL Editor 執行，見 README）
+- `members` 加 `is_muted boolean not null default false`
+- 新增 `reflection_reactions` 表（`reflection_id`、`member_id`、`kind`，
+  `unique(reflection_id, member_id)`）
+- 兩個都有寫入時的降級處理：欄位/表還沒手動建好，禁言操作、留反應都會安靜放棄，
+  不會讓後台或動態牆 500，只是功能還沒生效，要真的能用還是要跑過 migration。
+
 ## [Unreleased] - 2026-07-19（深夜）
 
 ### 設計決定：領受不再「留過一次就鎖住」

@@ -81,6 +81,21 @@ def admin_required(view):
     return wrapped
 
 
+def env_admin_required(view):
+    """比 admin_required 更嚴格：只有 ADMIN_LINE_USER_IDS 設定的永久管理員才能用，
+    一般輔導（is_leader）不行。禁言這種對別人帳號的動作要留給最高權限，
+    不能讓任何一個輔導都能操作。"""
+
+    @wraps(view)
+    @login_required
+    def wrapped(*args, **kwargs):
+        if not is_env_admin(get_user().get("line_user_id", "")):
+            return render_template("admin_forbidden.html", user=get_user()), 403
+        return view(*args, **kwargs)
+
+    return wrapped
+
+
 @auth_bp.get("/login")
 def login():
     if not (LINE_CHANNEL_ID and LINE_REDIRECT_URI):

@@ -14,6 +14,14 @@ from supabase_client import sb
 DEFAULT_GROUP_NAME = "恩典少年"
 DEFAULT_GUIDING_QUESTION = "哪一句話，也讓你想停下腳步？"
 
+# 對別人領受的反應，固定幾種、各自對應一句寫死的鼓勵語，不是自由留言——
+# 自由留言在青少年小組的靈修內容底下風險較高，怕不小心引發論戰。
+REACTION_KINDS = {
+    "resonate": {"emoji": "🌼", "phrase": "也很有共鳴"},
+    "comfort": {"emoji": "💛", "phrase": "覺得很安慰"},
+    "light": {"emoji": "✨", "phrase": "也被光照到"},
+}
+
 # 真人送出的領受目前一律長成花（圖鑑式的花／果／蝶／石分類是北極星文件明訂的
 # 第二階段功能，這一版故意不做）。這個小色盤只是讓同一叢花園裡的花不要長得
 # 一模一樣，跟「這朵比較稀有」完全無關。
@@ -25,6 +33,7 @@ _BLOOM_COLORS = ["#EFC26B", "#E8A98A", "#E2916A", "#D9B36C", "#E0A75E"]
 _demo_group = {"id": "demo-group", "name": DEFAULT_GROUP_NAME}
 _demo_passage: dict | None = None
 _demo_reflections: list[dict] = []
+_demo_reactions: list[dict] = []
 
 
 def _demo_mode() -> bool:
@@ -193,7 +202,7 @@ def upsert_member(user: dict) -> dict:
 
 def get_member_by_line_id(line_user_id: str) -> dict | None:
     if _demo_mode():
-        return {"id": f"demo-{line_user_id}", "is_leader": False}
+        return {"id": f"demo-{line_user_id}", "is_leader": False, "is_muted": False}
 
     result = sb.table("members").select("*").eq("line_user_id", line_user_id).limit(1).execute()
     return result.data[0] if result.data else None
@@ -214,6 +223,21 @@ def set_member_leader(member_id: str, is_leader: bool) -> None:
     if _demo_mode():
         return
     sb.table("members").update({"is_leader": is_leader}).eq("id", member_id).execute()
+
+
+def set_member_muted(member_id: str, is_muted: bool) -> None:
+    """禁言：不是封鎖帳號，還是能登入、能讀、能看動態牆，只是不能再留新的領受
+    （也不能編輯舊的）。只有最高權限（永久管理員）能操作，見 auth.env_admin_required。
+    """
+    if _demo_mode():
+        return
+    try:
+        sb.table("members").update({"is_muted": is_muted}).eq("id", member_id).execute()
+    except Exception as exc:  # noqa: BLE001 - 只在明確是「欄位不存在」時安靜放棄
+        message = getattr(exc, "message", None) or str(exc)
+        if getattr(exc, "code", None) == "PGRST204" and "'is_muted'" in message:
+            return
+        raise
 
 
 def set_nickname(member_id: str, nickname: str) -> None:
@@ -532,6 +556,84 @@ def delete_reflection(reflection_id: str) -> None:
         _demo_reflections = [r for r in _demo_reflections if r["id"] != reflection_id]
         return
     sb.table("reflections").delete().eq("id", reflection_id).execute()
+
+
+# ---------- 反應（對某一則領受的固定反應，不是自由留言） ----------
+
+
+def set_reaction(reflection_id: str, member_id: str, kind: str | None) -> None:
+    """對一則領受留反應，kind 是 REACTION_KINDS 裡的其中一種；kind 是 None
+    就是取消（再點一次同一個反應等於取消，呼叫端自己判斷）。一人對一則領受只有
+    一種反應，換一種就是蓋掉舊的，不會同時掛好幾個。
+    """
+    if kind is not None and kind not in REACTION_KINDS:
+        return
+
+    if _demo_mode():
+        global _demo_reactions
+        _demo_reactions = [
+            r for r in _demo_reactions if not (r["reflection_id"] == reflection_id and r["member_id"] == member_id)
+        ]
+        if kind is not None:
+            _demo_reactions.append({"id": str(uuid.uuid4()), "reflection_id": reflection_id, "member_id": member_id, "kind": kind})
+        return
+
+    try:
+        if kind is None:
+            sb.table("reflection_reactions").delete().eq("reflection_id", reflection_id).eq(
+                "member_id", member_id
+            ).execute()
+        else:
+            sb.table("reflection_reactions").upsert(
+                {"reflection_id": reflection_id, "member_id": member_id, "kind": kind},
+                on_conflict="reflection_id,member_id",
+            ).execute()
+    except Exception as exc:  # noqa: BLE001 - 表還沒手動建好（migration 還沒跑）就安靜放棄
+        if getattr(exc, "code", None) != "PGRST205":
+            raise
+
+
+def get_reactions_for_passage(reflection_ids: list[str], my_member_id: str | None = None) -> dict[str, list[dict]]:
+    """回傳 {reflection_id: [反應, ...]}，一次查完整段經文底下所有反應，
+    不要每一則領受各自查一次造成 N+1。表還沒建好（migration 還沒跑）就回空的，
+    不要讓動態牆整頁掛掉——反應是錦上添花的功能，不該擋住核心的「看領受」。
+    """
+    if _demo_mode():
+        by_reflection: dict[str, list[dict]] = {}
+        for r in _demo_reactions:
+            if r["reflection_id"] in reflection_ids:
+                by_reflection.setdefault(r["reflection_id"], []).append(
+                    {**r, "name": "你", "mine": r["member_id"] == my_member_id}
+                )
+        return by_reflection
+
+    if not reflection_ids:
+        return {}
+    try:
+        result = (
+            sb.table("reflection_reactions")
+            .select("*, members(display_name, nickname)")
+            .in_("reflection_id", reflection_ids)
+            .order("created_at")
+            .execute()
+        )
+    except Exception as exc:  # noqa: BLE001
+        if getattr(exc, "code", None) == "PGRST205":
+            return {}
+        raise
+
+    by_reflection: dict[str, list[dict]] = {}
+    for r in result.data:
+        by_reflection.setdefault(r["reflection_id"], []).append(
+            {
+                "id": r["id"],
+                "member_id": r["member_id"],
+                "kind": r["kind"],
+                "name": _display_name(r.get("members")),
+                "mine": my_member_id is not None and r["member_id"] == my_member_id,
+            }
+        )
+    return by_reflection
 
 
 def export_passage(passage_id: str) -> dict:

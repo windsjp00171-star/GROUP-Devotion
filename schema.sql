@@ -26,6 +26,10 @@ create table if not exists members (
   -- 永久管理員，不受這個欄位影響；這個欄位是「後台可以指定誰是輔導」
   -- 那種可以隨時開關的一般輔導。
   is_leader boolean not null default false,
+  -- 禁言：不是封鎖帳號，還是能登入、能讀、能看動態牆，只是不能再留新的領受
+  -- （也不能編輯舊的）。只有永久管理員（ADMIN_LINE_USER_IDS）能操作，見
+  -- auth.env_admin_required——一般輔導不行，這個動作要留給最高權限。
+  is_muted boolean not null default false,
   created_at timestamptz not null default now()
 );
 
@@ -61,11 +65,25 @@ create table if not exists reflections (
   -- 不會因為留過一次就被鎖住——回頭重讀有新的感動，本來就可以再留一則。
 );
 
+create table if not exists reflection_reactions (
+  id uuid primary key default gen_random_uuid(),
+  reflection_id uuid not null references reflections(id) on delete cascade,
+  member_id uuid not null references members(id) on delete cascade,
+  -- 固定的幾種反應，各自對應一句寫死的鼓勵語（見 data_store.REACTION_KINDS），
+  -- 不是自由留言——怕自由留言在青少年小組的靈修內容底下容易引發論戰。
+  kind text not null check (kind in ('resonate', 'comfort', 'light')),
+  created_at timestamptz not null default now(),
+  -- 一人對一則領受只能留一種反應，可以換，不會同時掛好幾個。
+  unique (reflection_id, member_id)
+);
+
 create index if not exists idx_members_group on members (group_id);
 create index if not exists idx_daily_passages_group_date on daily_passages (group_id, passage_date);
 create index if not exists idx_reflections_passage on reflections (passage_id);
+create index if not exists idx_reflection_reactions_reflection on reflection_reactions (reflection_id);
 
 alter table groups enable row level security;
 alter table members enable row level security;
 alter table daily_passages enable row level security;
 alter table reflections enable row level security;
+alter table reflection_reactions enable row level security;

@@ -11,7 +11,7 @@
     <h1>誰是輔導</h1>
   </header>
 
-  <p class="admin-hint">輔導可以進後台排經文。在 Railway 環境變數設定的是永久管理員，這裡看得到但不能取消；其他成員可以直接在這裡設成／取消輔導。</p>
+  <p class="admin-hint">輔導可以進後台排經文。在 Railway 環境變數設定的是永久管理員，這裡看得到但不能取消；其他成員可以直接在這裡設成／取消輔導。{% if current_user_is_env_admin %}永久管理員還可以禁言：不是封鎖帳號，還是能讀、能看動態牆，只是不能再留新的領受。{% endif %}</p>
 
   <section class="passage-card">
     {% if not members %}
@@ -26,17 +26,32 @@
         {% elif m.is_leader %}
         <span class="member-row__badge member-row__badge--leader">輔導</span>
         {% endif %}
+        {% if m.is_muted %}
+        <span class="member-row__badge member-row__badge--muted">已禁言</span>
+        {% endif %}
       </div>
-      {% if not m.is_env_admin %}
-      <form method="post" action="{{ url_for('admin_toggle_leader') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="member_id" value="{{ m.id }}">
-        <input type="hidden" name="is_leader" value="{{ '0' if m.is_leader else '1' }}">
-        <button type="submit" class="member-row__toggle" {% if m.id == current_member_id %}disabled title="不能改自己"{% endif %}>
-          {{ '取消輔導' if m.is_leader else '設為輔導' }}
-        </button>
-      </form>
-      {% endif %}
+      <div class="member-row__actions">
+        {% if not m.is_env_admin %}
+        <form method="post" action="{{ url_for('admin_toggle_leader') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="member_id" value="{{ m.id }}">
+          <input type="hidden" name="is_leader" value="{{ '0' if m.is_leader else '1' }}">
+          <button type="submit" class="member-row__toggle" {% if m.id == current_member_id %}disabled title="不能改自己"{% endif %}>
+            {{ '取消輔導' if m.is_leader else '設為輔導' }}
+          </button>
+        </form>
+        {% endif %}
+        {% if current_user_is_env_admin and m.id != current_member_id %}
+        <form method="post" action="{{ url_for('admin_toggle_mute') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="member_id" value="{{ m.id }}">
+          <input type="hidden" name="is_muted" value="{{ '0' if m.is_muted else '1' }}">
+          <button type="submit" class="member-row__toggle member-row__toggle--mute">
+            {{ '解除禁言' if m.is_muted else '禁言' }}
+          </button>
+        </form>
+        {% endif %}
+      </div>
     </div>
     {% endfor %}
   </section>

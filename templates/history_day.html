@@ -37,6 +37,9 @@
     <p class="already-count-hint">你在這段已經留了 {{ my_reflection_count }} 則，重讀有新的感動一樣可以再留一則</p>
     {% endif %}
 
+    {% if is_muted %}
+    <p class="muted-hint">你目前沒辦法在這裡留下領受。</p>
+    {% else %}
     <form class="reflection-form" method="post" action="{{ url_for('submit_reflection') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="passage_id" value="{{ passage.id }}">
@@ -56,6 +59,7 @@
       <input type="hidden" name="passage_date" value="{{ passage_date }}">
       <button type="submit" class="btn btn--ghost">我也讀了</button>
     </form>
+    {% endif %}
   </section>
 
   <section class="feed" id="feed">

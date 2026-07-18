@@ -36,6 +36,10 @@
     <p class="already-count-hint">你今天已經留了 {{ my_reflection_count }} 則，重讀有新的感動一樣可以再留一則</p>
     {% endif %}
 
+    {% if is_muted %}
+    <p class="muted-hint">你目前沒辦法在這裡留下領受。</p>
+    <a class="btn btn--ghost" href="#feed">先看看大家怎麼讀這段 ↓</a>
+    {% else %}
     <form class="reflection-form" method="post" action="{{ url_for('submit_reflection') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="verse_indexes" id="verse-index-input" value="">
@@ -56,6 +60,7 @@
     </form>
     <a class="btn btn--ghost" href="#feed"
        data-tour-step="5" data-tour-text="還沒想好要不要寫？往下滑就能看到大家怎麼讀這段。">先看看大家怎麼讀</a>
+    {% endif %}
   </section>
 
   <section class="feed" id="feed">

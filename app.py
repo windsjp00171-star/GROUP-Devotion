@@ -11,16 +11,18 @@ from flask import Flask, Response, redirect, render_template, request, send_from
 
 import ai_guide
 import local_time
-from auth import auth_bp, admin_required, get_user, is_admin, is_env_admin, login_required, require_login
+from auth import auth_bp, admin_required, env_admin_required, get_user, is_admin, is_env_admin, login_required, require_login
 from csrf import csrf_protect, csrf_token
 from data_store import (
     DEFAULT_GUIDING_QUESTION,
+    REACTION_KINDS,
     add_my_reflection,
     delete_reflection,
     export_passage,
     get_member_by_line_id,
     get_passage_by_date,
     get_passage_by_id,
+    get_reactions_for_passage,
     get_reflection_by_id,
     get_reflections,
     get_today_passage,
@@ -28,8 +30,10 @@ from data_store import (
     list_members,
     list_passage_dates,
     set_member_leader,
+    set_member_muted,
     set_nickname,
     set_passage_for_date,
+    set_reaction,
     set_today_passage,
     update_reflection,
 )
@@ -51,8 +55,10 @@ def inject_globals():
     return {
         "current_user": get_user() if require_login() else None,
         "current_user_is_admin": is_admin(),
+        "current_user_is_env_admin": is_env_admin(get_user().get("line_user_id", "")) if require_login() else False,
         "bible_actionbook_url": BIBLE_ACTIONBOOK_URL,
         "csrf_token": csrf_token,
+        "reaction_kinds": REACTION_KINDS,
     }
 
 
@@ -68,15 +74,38 @@ def _actionbook_deep_link(reference: str) -> str:
     return f"{BIBLE_ACTIONBOOK_URL.rstrip('/')}/read/{book}/{chapter}"
 
 
-def _current_member_id():
+def _current_member():
     if not require_login():
         return None
-    member = get_member_by_line_id(get_user()["line_user_id"])
+    return get_member_by_line_id(get_user()["line_user_id"])
+
+
+def _current_member_id():
+    member = _current_member()
     return member["id"] if member else None
+
+
+def _current_member_is_muted() -> bool:
+    member = _current_member()
+    return bool(member and member.get("is_muted"))
 
 
 def _sort_param() -> str:
     return "desc" if request.args.get("sort") == "desc" else "asc"
+
+
+def _with_reactions(reflections: list[dict], my_member_id: str | None) -> list[dict]:
+    """幫每一則領受附上底下的反應，一次查完不要每一則各自查一次。
+    順便算出 my_reaction_kind：我自己對這則領受留了哪一種反應（沒有就是 None），
+    畫面上才知道要把哪個反應按鈕畫成「已選」的樣子。
+    """
+    reactions_by_reflection = get_reactions_for_passage([r["id"] for r in reflections], my_member_id)
+    for r in reflections:
+        reactions = reactions_by_reflection.get(r["id"], [])
+        r["reactions"] = reactions
+        mine = next((x for x in reactions if x["mine"]), None)
+        r["my_reaction_kind"] = mine["kind"] if mine else None
+    return reflections
 
 
 @app.route("/healthz")
@@ -132,7 +161,7 @@ def home():
 
     my_member_id = _current_member_id()
     sort = _sort_param()
-    reflections = get_reflections(passage["id"], my_member_id, sort=sort)
+    reflections = _with_reactions(get_reflections(passage["id"], my_member_id, sort=sort), my_member_id)
     my_reflection_count = sum(1 for r in reflections if r["mine"])
 
     return render_template(
@@ -142,6 +171,7 @@ def home():
         reflections=reflections,
         my_reflection_count=my_reflection_count,
         sort=sort,
+        is_muted=_current_member_is_muted(),
         bible_actionbook_url=_actionbook_deep_link(passage["reference"]),
     )
 
@@ -149,6 +179,14 @@ def home():
 @app.route("/reflections", methods=["POST"])
 @login_required
 def submit_reflection():
+    # 禁言：不是封鎖帳號，還是能讀、能看動態牆，只是不能再留新的領受——
+    # 安靜擋掉，不用一個大大的錯誤頁面告訴他「你被禁言了」。
+    if _current_member_is_muted():
+        passage_date = request.form.get("passage_date")
+        if passage_date:
+            return redirect(url_for("history_day", passage_date=passage_date))
+        return redirect(url_for("home"))
+
     # 回顧頁：針對指定（過去）的那一段經文留領受，可以標記好幾句、可以寫字，
     # 跟首頁「留下我的領受」是同一件事——只是忙到今天才回來補，不代表當初沒有真的
     # 停下來讀，回頭補的領受一樣是真的領受。
@@ -191,6 +229,18 @@ def admin_delete_reflection(reflection_id):
     return redirect(url_for("home"))
 
 
+@app.route("/reflections/<reflection_id>/react", methods=["POST"])
+@login_required
+def submit_reaction(reflection_id):
+    """對一則領受留固定反應（不是自由留言）。再點一次已經留過的那個反應就是取消。"""
+    kind = request.form.get("kind") or None
+    set_reaction(reflection_id, _current_member_id(), kind)
+    next_url = request.form.get("next") or ""
+    if next_url.startswith("/"):
+        return redirect(next_url)
+    return redirect(url_for("home"))
+
+
 @app.route("/reflections/<reflection_id>/edit", methods=["GET", "POST"])
 @login_required
 def edit_reflection(reflection_id):
@@ -199,6 +249,11 @@ def edit_reflection(reflection_id):
     reflection = get_reflection_by_id(reflection_id)
     my_member_id = _current_member_id()
     if not reflection or reflection.get("member_id") != my_member_id:
+        return redirect(url_for("home"))
+
+    # 禁言的人不能編輯舊的領受，不然等於繞過禁言直接改內容——GET／POST 都擋，
+    # 不要讓他打開編輯頁打了字送出才發現沒用。
+    if _current_member_is_muted():
         return redirect(url_for("home"))
 
     passage = get_passage_by_id(reflection["passage_id"])
@@ -309,7 +364,7 @@ def history_day(passage_date):
 
     my_member_id = _current_member_id()
     sort = _sort_param()
-    reflections = get_reflections(passage["id"], my_member_id, sort=sort)
+    reflections = _with_reactions(get_reflections(passage["id"], my_member_id, sort=sort), my_member_id)
     my_reflection_count = sum(1 for r in reflections if r["mine"])
 
     return render_template(
@@ -320,6 +375,7 @@ def history_day(passage_date):
         reflections=reflections,
         my_reflection_count=my_reflection_count,
         sort=sort,
+        is_muted=_current_member_is_muted(),
         bible_actionbook_url=_actionbook_deep_link(passage["reference"]),
     )
 
@@ -442,6 +498,18 @@ def admin_toggle_leader():
     # 不能改自己：避免手滑把自己踢出去、後台從此進不去。
     if member_id and member_id != _current_member_id():
         set_member_leader(member_id, make_leader)
+    return redirect(url_for("admin_leaders"))
+
+
+@app.route("/admin/leaders/mute", methods=["POST"])
+@env_admin_required
+def admin_toggle_mute():
+    """禁言：只有永久管理員（最高權限）能操作，不是任何一個輔導都可以。
+    不是封鎖帳號，禁言的人還是能登入、能讀、能看動態牆，只是不能再留新的領受。"""
+    member_id = request.form.get("member_id")
+    make_muted = request.form.get("is_muted") == "1"
+    if member_id and member_id != _current_member_id():
+        set_member_muted(member_id, make_muted)
     return redirect(url_for("admin_leaders"))
 
 
