@@ -609,6 +609,48 @@ body {
   margin-top: 16px;
 }
 
+.admin-preview-btn {
+  margin-top: 10px;
+}
+
+.admin-preview {
+  margin-top: 10px;
+  padding: 14px 16px;
+  background: var(--color-bg-screen);
+  border: 1px solid var(--color-card-border);
+  border-radius: 14px;
+}
+
+.admin-preview__ref {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--color-accent);
+}
+
+.admin-preview__verse {
+  margin: 0 0 6px;
+  font-family: var(--font-serif);
+  font-size: 15px;
+  line-height: 1.9;
+  color: var(--color-ink);
+}
+
+.admin-preview__num {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-accent);
+  margin-right: 5px;
+}
+
+.admin-preview__error {
+  margin: 0;
+  font-size: 13px;
+  color: #A94442;
+}
+
 /* ---------- 同一段路上（動態牆） ---------- */
 
 .feed {

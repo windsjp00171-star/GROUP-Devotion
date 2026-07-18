@@ -6,7 +6,82 @@ document.addEventListener('DOMContentLoaded', () => {
   initSubmitFeedback();
   initSortSelect();
   initReactions();
+  initPassagePreview();
 });
+
+function initPassagePreview() {
+  // 後台排經文前先預覽帶出來的經文對不對，減少排錯。經文從和合本全文帶出，
+  // 跟真正排定時同一個來源。
+  const btn = document.querySelector('[data-preview-btn]');
+  const out = document.querySelector('[data-preview-out]');
+  if (!btn || !out) return;
+
+  const bookEl = document.getElementById('range-book');
+  const rangeEl = document.getElementById('range-range');
+  const subtitleEl = document.getElementById('range-subtitle');
+
+  function show(html) {
+    out.innerHTML = '';
+    out.appendChild(html);
+    out.hidden = false;
+  }
+
+  btn.addEventListener('click', () => {
+    const book = bookEl ? bookEl.value.trim() : '';
+    const range = rangeEl ? rangeEl.value.trim() : '';
+    if (!range) {
+      const p = document.createElement('p');
+      p.className = 'admin-preview__error';
+      p.textContent = '先填章節，例如 24:13-17';
+      show(p);
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = '讀取中…';
+
+    const url = '/admin/preview?book=' + encodeURIComponent(book) + '&range=' + encodeURIComponent(range);
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
+      .then((data) => {
+        if (!data.ok) {
+          const p = document.createElement('p');
+          p.className = 'admin-preview__error';
+          p.textContent = data.error || '找不到這段經文';
+          show(p);
+          return;
+        }
+        const frag = document.createDocumentFragment();
+        const title = document.createElement('p');
+        title.className = 'admin-preview__ref';
+        const subtitle = subtitleEl ? subtitleEl.value.trim() : '';
+        title.textContent = data.reference + (subtitle ? ' · ' + subtitle : '');
+        frag.appendChild(title);
+        data.verses.forEach((v) => {
+          const p = document.createElement('p');
+          p.className = 'admin-preview__verse';
+          if (v.label) {
+            const num = document.createElement('span');
+            num.className = 'admin-preview__num';
+            num.textContent = v.label;
+            p.appendChild(num);
+          }
+          p.appendChild(document.createTextNode(v.text));
+          frag.appendChild(p);
+        });
+        show(frag);
+      })
+      .catch(() => {
+        const p = document.createElement('p');
+        p.className = 'admin-preview__error';
+        p.textContent = '讀取失敗，檢查一下網路或書卷章節格式';
+        show(p);
+      })
+      .finally(() => {
+        btn.disabled = false;
+        btn.textContent = '先預覽這段經文';
+      });
+  });
+}
 
 function initReactions() {
   // 反應改成不整頁重整：攔截送出、用 fetch 打 API、就地更新那一則的反應區。

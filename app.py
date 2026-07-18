@@ -492,6 +492,23 @@ def admin():
     )
 
 
+@app.route("/admin/preview")
+@admin_required
+def admin_preview():
+    """排定前先看一眼帶出來的經文對不對，減少排錯。回 JSON 給後台畫面用，
+    經文一律從和合本全文帶出（跟真正排定時同一個來源），不是預覽一套、存的又是另一套。"""
+    book = (request.args.get("book") or "").strip()
+    verse_range = (request.args.get("range") or "").strip()
+    labeled = get_scripture_with_labels(book, verse_range)
+    if not labeled:
+        return {"ok": False, "error": f"找不到「{book} {verse_range}」，檢查一下書卷名稱跟章節格式"}
+    return {
+        "ok": True,
+        "reference": f"{book} {verse_range}",
+        "verses": [{"label": label, "text": text} for label, text in labeled],
+    }
+
+
 @app.route("/admin/schedule_by_range", methods=["POST"])
 @admin_required
 def admin_schedule_by_range():
