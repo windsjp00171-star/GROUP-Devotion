@@ -359,6 +359,41 @@ def edit_reflection(reflection_id):
     )
 
 
+@app.route("/reflections/<reflection_id>/card")
+@login_required
+def reflection_card(reflection_id):
+    """把自己的一則領受做成分享圖卡（經文＋領受）。只能做自己的那則。
+    圖是前端 canvas 畫的（正式站沒有瀏覽器可以截圖），這裡只給資料。"""
+    reflection = get_reflection_by_id(reflection_id)
+    my_member_id = _current_member_id()
+    if not reflection or reflection.get("member_id") != my_member_id:
+        return redirect(url_for("home"))
+
+    passage = get_passage_by_id(reflection["passage_id"])
+    if not passage:
+        return redirect(url_for("home"))
+
+    verses = passage.get("verses") or []
+    verse_indexes = reflection.get("verse_indexes") or (
+        [reflection["verse_index"]] if reflection.get("verse_index") is not None else []
+    )
+    verse_text = "".join(verses[i] for i in verse_indexes if i < len(verses))
+    note = (reflection.get("note") or "").strip()
+    # 純「我也讀了」（沒標記經文也沒寫字）沒東西好做卡片。
+    if not verse_text and not note:
+        return redirect(url_for("home"))
+
+    back = request.args.get("next") or ""
+    if not back.startswith("/"):
+        back = url_for("my_reflections")
+
+    return render_template(
+        "reflection_card.html",
+        card={"reference": passage["reference"], "verse": verse_text, "note": note},
+        back=back,
+    )
+
+
 @app.route("/me")
 @login_required
 def my_reflections():

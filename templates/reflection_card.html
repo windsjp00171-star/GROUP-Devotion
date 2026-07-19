@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}做成圖卡{% endblock %}
+{% block tour_key %}card{% endblock %}
+
+{% block content %}
+<div class="screen">
+
+  <header class="home-header">
+    <a class="history-back" href="{{ back }}">← 返回</a>
+    <h1>做成圖卡</h1>
+    <p class="history-sub">把這則領受做成圖，分享到 LINE／IG</p>
+  </header>
+
+  <div class="card-fmt-row">
+    <button type="button" class="card-fmt card-fmt--active" data-fmt="square">方形（貼文）</button>
+    <button type="button" class="card-fmt" data-fmt="portrait">直式（限動）</button>
+  </div>
+
+  <div class="card-preview">
+    <canvas id="card-canvas" class="card-canvas" aria-label="金句圖卡預覽"></canvas>
+  </div>
+
+  <div class="card-actions">
+    <button type="button" class="btn btn--primary" id="card-download">下載圖片</button>
+    <button type="button" class="btn btn--ghost" id="card-share" hidden>分享到…</button>
+  </div>
+
+  <script id="card-data" type="application/json">{{ card | tojson }}</script>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/card.js') }}"></script>
+{% endblock %}

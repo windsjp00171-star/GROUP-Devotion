@@ -43,6 +43,9 @@
       {% if not is_muted %}
       <a class="feed-item__edit" href="{{ url_for('edit_reflection', reflection_id=r.id, next=request.path) }}">編輯</a>
       {% endif %}
+      {% if (r.note and r.note.strip()) or r.verse_indexes %}
+      <a class="feed-item__edit" href="{{ url_for('reflection_card', reflection_id=r.id, next=request.path) }}">做成圖卡</a>
+      {% endif %}
       <form class="feed-item__own-delete" method="post" action="{{ url_for('delete_my_reflection', reflection_id=r.id) }}"
             onsubmit="return confirm('刪掉這則領受？刪掉就找不回來了。');">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

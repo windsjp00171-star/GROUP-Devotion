@@ -1004,6 +1004,50 @@ body {
   color: var(--color-ink-soft);
 }
 
+/* ---------- 金句圖卡 ---------- */
+
+.card-fmt-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.card-fmt {
+  border: 1px solid var(--color-card-border);
+  background: var(--color-card);
+  color: var(--color-ink-soft);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  border-radius: 999px;
+  padding: 7px 16px;
+  cursor: pointer;
+}
+
+.card-fmt--active {
+  border-color: var(--color-accent);
+  background: var(--color-highlight);
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+.card-preview {
+  margin-top: 14px;
+  display: flex;
+  justify-content: center;
+}
+
+.card-canvas {
+  width: 100%;
+  max-width: 360px;
+  height: auto;
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(73, 61, 46, 0.12);
+}
+
+.card-actions {
+  margin-top: 16px;
+}
+
 .history-back {
   display: inline-block;
   margin-bottom: 8px;
