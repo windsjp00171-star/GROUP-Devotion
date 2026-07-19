@@ -18,6 +18,18 @@ python app.py
 
 開啟 http://127.0.0.1:5000
 
+## 測試
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+測試靠 `tests/conftest.py` 在 import app 之前把 `SUPABASE_URL` 清空，**強制整套跑在
+記憶體示範模式**，所以：不需要任何金鑰、跑很快、而且**絕對不會連到或寫到真實的
+Supabase**（之前手動測試不小心寫進正式站的意外，測試套件從設計上就杜絕）。
+每次 push／PR 也會在 GitHub Actions 自動跑一遍（`.github/workflows/tests.yml`）。
+
 ### 三種執行模式
 
 這個 app 會自動依照 `.env` 有沒有填值，決定自己跑在哪種模式，不用改程式碼：

@@ -2,6 +2,24 @@
 
 本文件記錄 GROUP-Devotion 的重要變更，時間由新到舊排列。
 
+## [Unreleased] - 2026-07-20（測試套件）
+
+### 新增
+- 自動化測試套件（pytest，`tests/`）：涵蓋和合本查詢、登入／權限、留領受（複選、
+  編輯、刪除、越權保護）、反應（切換／無效種類／AJAX）、後台排經文（經文只能從正版
+  帶出、預覽）、回顧日期界線、金句圖卡（越權保護）、匯出等 42 個測試。
+- 關鍵設計：`tests/conftest.py` 在 import app 之前清空 `SUPABASE_URL`，**強制整套跑在
+  記憶體示範模式**——不需要金鑰、跑很快、而且絕對不會碰到真實 Supabase（之前手動
+  測試寫進正式站的意外，從設計上杜絕）。
+- GitHub Actions（`.github/workflows/tests.yml`）：每次 push／PR 自動跑測試。
+  CI 不需要任何 secret（測試本來就跑在示範模式）。
+
+### 修正（測試抓到的潛在 bug）
+- `get_reflections` 在示範模式下沒有把「我也讀了」那種 `verse_indexes=None` 正規化成
+  空陣列，動態牆樣板 `{% for vi in r.verse_indexes %}` 會 iterate None 而 500。正式站
+  接真資料庫那條路本來就有 `or [...]` 蓋掉，所以只在示範模式炸；但正規化改成兩條路
+  都保證是 list，比較穩。
+
 ## [Unreleased] - 2026-07-20（金句圖卡）
 
 ### 新增

@@ -458,7 +458,8 @@ def get_reflections(passage_id: str, my_member_id: str | None = None, sort: str 
     不會有「誰的領受比較多」這種排序，純粹是瀏覽順序的偏好。
     """
     if _demo_mode():
-        items = list(_demo_reflections)
+        # 複製一份，不要讓下面正規化 verse_indexes 的動作改到記憶體示範資料本身。
+        items = [dict(r) for r in _demo_reflections]
         if sort == "desc":
             items = list(reversed(items))
     else:
@@ -485,7 +486,9 @@ def get_reflections(passage_id: str, my_member_id: str | None = None, sort: str 
         ]
 
     for item in items:
-        item.setdefault("verse_indexes", [])
+        # 一律正規化成 list——「我也讀了」存的是 None，畫面 {% for %} 不能 iterate None。
+        if not item.get("verse_indexes"):
+            item["verse_indexes"] = []
         item["mine"] = my_member_id is not None and item["member_id"] == my_member_id
     return items
 

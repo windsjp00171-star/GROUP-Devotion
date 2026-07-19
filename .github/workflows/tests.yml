@@ -1,0 +1,21 @@
+name: tests
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: 安裝套件
+        run: pip install -r requirements-dev.txt
+      # 測試靠 conftest.py 強制跑在記憶體示範模式，不需要任何 Supabase／LINE 金鑰，
+      # CI 也不會碰到真實資料庫。
+      - name: 跑測試
+        run: pytest

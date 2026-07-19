@@ -1,0 +1,4 @@
+# 開發／測試用的額外套件（正式部署不需要）。
+# 安裝：pip install -r requirements-dev.txt
+-r requirements.txt
+pytest>=8.0
