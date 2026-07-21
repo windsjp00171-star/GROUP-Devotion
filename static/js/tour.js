@@ -79,9 +79,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // 表單）時，rect.top 會是負的、rect.bottom 會超出畫面，直接拿原始值去畫，框跟說明卡
     // 都會爆到畫面外、看起來怪怪的一大塊。改成先算出「可見的那一段」再畫。
     const boxTop = Math.max(margin, rect.top - pad);
-    const boxBottom = Math.min(viewportHeight - margin, rect.bottom + pad);
+    let boxBottom = Math.min(viewportHeight - margin, rect.bottom + pad);
     const boxLeft = Math.max(margin, rect.left - pad);
     const boxRight = Math.min(viewportWidth - margin, rect.right + pad);
+
+    // 保險：框的高度絕不超過畫面的一半——就算不小心把導覽掛在很高的元素上，也不會
+    // 整個畫面都被框起來（看起來像「框選全頁面」），而且一定留得下空間給說明卡。
+    const maxBoxHeight = viewportHeight * 0.5;
+    if (boxBottom - boxTop > maxBoxHeight) {
+      boxBottom = boxTop + maxBoxHeight;
+    }
+
     const boxHeight = Math.max(0, boxBottom - boxTop);
     const boxWidth = Math.max(0, boxRight - boxLeft);
 
