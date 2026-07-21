@@ -90,6 +90,8 @@ app.register_blueprint(auth_bp)
 app.before_request(csrf_protect)
 
 BIBLE_ACTIONBOOK_URL = os.environ.get("BIBLE_ACTIONBOOK_URL", "")
+# EMMARK 作品集官網。這支 App 是作品集裡的一件作品，留一條路回得去。
+PORTFOLIO_URL = os.environ.get("PORTFOLIO_URL", "https://windsjp00171-star.github.io/CLAUDE-DESIGN/")
 
 
 @app.context_processor
@@ -99,6 +101,7 @@ def inject_globals():
         "current_user_is_admin": is_admin(),
         "current_user_is_env_admin": is_env_admin(get_user().get("line_user_id", "")) if require_login() else False,
         "bible_actionbook_url": BIBLE_ACTIONBOOK_URL,
+        "portfolio_url": PORTFOLIO_URL,
         "csrf_token": csrf_token,
         "reaction_kinds": REACTION_KINDS,
     }
@@ -149,6 +152,7 @@ _GROUP_GATE_EXEMPT = (
     "/dev/login",
     "/settings",
     "/about",
+    "/portfolio",
     "/healthz",
     "/offline",
     "/sw.js",
@@ -219,6 +223,14 @@ def about():
     """安心使用聲明 ＋ 資安管控聲明。刻意不用登入——想試用的人可以先讀完這頁，
     了解這個系統做什麼、不做什麼、以及我們做了哪些資安管控，再決定要不要登入。"""
     return render_template("about.html")
+
+
+@app.route("/portfolio")
+def portfolio():
+    """回到 EMMARK 作品集官網。包一層站內路由，網址之後要換只改一個地方，
+    畫面連結、分享出去的網址都跟著換。不用登入——這只是往外連。
+    目的地是伺服器端寫死的常數（非使用者輸入），不會變成 open redirect。"""
+    return redirect(PORTFOLIO_URL)
 
 
 @app.route("/sw.js")

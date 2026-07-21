@@ -477,6 +477,12 @@ body {
   text-underline-offset: 3px;
 }
 
+.app-footer-sep {
+  margin: 0 8px;
+  font-size: 12px;
+  color: var(--color-card-border);
+}
+
 /* 安心使用聲明頁的條列：留白大一點、好讀，不要擠成一團。 */
 .trust-list {
   margin: 10px 0 0;

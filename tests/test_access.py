@@ -1,6 +1,6 @@
 """登入／權限：誰能進哪裡。"""
 
-from app import _csv_safe
+from app import _csv_safe, PORTFOLIO_URL
 
 
 def test_home_requires_login(client):
@@ -17,6 +17,12 @@ def test_offline_and_sw_no_login(client):
     assert client.get("/offline").status_code == 200
     sw = client.get("/sw.js")
     assert sw.status_code == 200 and "javascript" in sw.content_type
+
+
+def test_portfolio_redirects_no_login(client):
+    r = client.get("/portfolio")
+    assert r.status_code in (301, 302)
+    assert r.headers["Location"] == PORTFOLIO_URL
 
 
 def test_admin_forbidden_for_normal_user(user):
