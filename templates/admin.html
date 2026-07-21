@@ -11,7 +11,21 @@
     <h1>排經文</h1>
   </header>
 
-  <a class="link-quiet" href="{{ url_for('admin_leaders') }}">管理誰是輔導</a>
+  {% if group %}
+  <section class="passage-card group-card">
+    <p class="eyebrow">這個小組</p>
+    <h2 class="group-card__name">{{ group.name }}</h2>
+    {% if group.join_code %}
+    <p class="admin-hint" style="margin-top:0;">把這串加入碼給組員，他們登入後貼進去就能加入這一組：</p>
+    <p class="join-code" data-join-code>{{ group.join_code }}</p>
+    <button type="button" class="btn btn--ghost" data-copy-join-code>複製加入碼</button>
+    {% else %}
+    <p class="admin-hint">這個小組還沒有加入碼（到 Supabase 跑一次 migration 補上就有了）。</p>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <a class="link-quiet" href="{{ url_for('admin_leaders') }}">管理輔導與禁言</a>
 
   {% if saved %}
   <div class="submitted-banner">

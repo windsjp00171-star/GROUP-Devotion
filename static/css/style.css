@@ -447,6 +447,36 @@ body {
   color: var(--color-success-ink);
 }
 
+/* 加入碼不對之類的提示，用暖色但不刺眼的底色，不是紅色錯誤感。 */
+.submitted-banner--warn {
+  background: #FBEEDD;
+}
+
+.submitted-banner--warn p {
+  color: #96602E;
+}
+
+/* 後台的小組資訊卡：組名＋加入碼 */
+.group-card__name {
+  margin: 2px 0 10px;
+  font-size: 20px;
+  color: var(--color-ink);
+}
+
+.join-code {
+  margin: 6px 0 4px;
+  font-family: "Noto Sans TC", monospace;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: var(--color-accent);
+  background: #FBF4E2;
+  border: 1px dashed #D9C48E;
+  border-radius: 12px;
+  padding: 12px 4px;
+  text-align: center;
+}
+
 .seed-dot {
   width: 22px;
   height: 22px;

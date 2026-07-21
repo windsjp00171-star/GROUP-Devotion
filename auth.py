@@ -155,8 +155,11 @@ def line_callback():
     member = upsert_member(user)
 
     next_url = session.pop("login_next", None) or url_for("home")
+    if not member.get("group_id"):
+        # 還沒加入任何小組：先去 onboarding 用加入碼加入、或自己開一組（多小組的入口）。
+        return redirect(url_for("onboarding"))
     if not member.get("nickname"):
-        # 第一次登入、還沒取過暱稱：先請他取一個，取完（或跳過）再去原本要去的地方。
+        # 已經有組但還沒取過暱稱：先請他取一個，取完（或跳過）再去原本要去的地方。
         return redirect(url_for("settings", first="1", next=next_url))
     return redirect(next_url)
 
@@ -182,6 +185,8 @@ if DEV_MODE:
         session.permanent = True
         session["user"] = user
         member = upsert_member(user)
+        if not member.get("group_id"):
+            return redirect(url_for("onboarding"))
         if not member.get("nickname"):
             return redirect(url_for("settings", first="1"))
         return redirect(url_for("home"))

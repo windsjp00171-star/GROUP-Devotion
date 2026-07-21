@@ -7,7 +7,23 @@ document.addEventListener('DOMContentLoaded', () => {
   initSortSelect();
   initReactions();
   initPassagePreview();
+  initCopyJoinCode();
 });
+
+// 後台「複製加入碼」：把六碼複製到剪貼簿，方便貼給組員。沒有 clipboard API 就不做，
+// 反正加入碼本來就看得見、可以自己選取複製，這只是順手。
+function initCopyJoinCode() {
+  const btn = document.querySelector('[data-copy-join-code]');
+  const codeEl = document.querySelector('[data-join-code]');
+  if (!btn || !codeEl || !navigator.clipboard) return;
+  btn.addEventListener('click', () => {
+    navigator.clipboard.writeText(codeEl.textContent.trim()).then(() => {
+      const original = btn.textContent;
+      btn.textContent = '已複製';
+      setTimeout(() => { btn.textContent = original; }, 1600);
+    });
+  });
+}
 
 function initPassagePreview() {
   // 後台排經文前先預覽帶出來的經文對不對，減少排錯。經文從和合本全文帶出，

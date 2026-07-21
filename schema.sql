@@ -10,12 +10,18 @@ create extension if not exists "pgcrypto";
 create table if not exists groups (
   id uuid primary key default gen_random_uuid(),
   name text not null,
+  -- 加入碼：別人靠這串短碼加入這個小組（大寫英數、避開易混淆的 0/O/1/I）。
+  -- 每一組獨立、互不相通——這是「多小組」隔離的入口：你只會加入到手上這串碼
+  -- 對應的那一組，看不到別組的經文與領受。
+  join_code text unique,
   created_at timestamptz not null default now()
 );
 
 create table if not exists members (
   id uuid primary key default gen_random_uuid(),
-  group_id uuid not null references groups(id) on delete cascade,
+  -- 可為 null：一個人剛登入、還沒加入或建立任何小組時，group_id 是 null，
+  -- 會被導去 /onboarding 先選「用加入碼加入」或「自己開一組」。加入/建組後才有值。
+  group_id uuid references groups(id) on delete cascade,
   line_user_id text not null unique,
   display_name text not null default '',
   picture_url text,
@@ -78,6 +84,7 @@ create table if not exists reflection_reactions (
   unique (reflection_id, member_id)
 );
 
+create unique index if not exists idx_groups_join_code on groups (join_code);
 create index if not exists idx_members_group on members (group_id);
 create index if not exists idx_daily_passages_group_date on daily_passages (group_id, passage_date);
 create index if not exists idx_reflections_passage on reflections (passage_id);

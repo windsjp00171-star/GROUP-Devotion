@@ -19,15 +19,17 @@ from flask import Flask, Response, redirect, render_template, request, send_from
 
 import ai_guide  # noqa: E402
 import local_time  # noqa: E402
-from auth import auth_bp, admin_required, env_admin_required, get_user, is_admin, is_env_admin, login_required, require_login  # noqa: E402
+from auth import auth_bp, admin_required, get_user, is_admin, is_env_admin, login_required, require_login  # noqa: E402
 from csrf import csrf_protect, csrf_token  # noqa: E402
 from data_store import (  # noqa: E402
     DEFAULT_GUIDING_QUESTION,
     REACTION_KINDS,
     add_my_reflection,
+    create_group,
     delete_own_reflection,
     delete_reflection,
     export_passage,
+    get_group,
     get_member_by_line_id,
     get_my_reflections,
     get_passage_by_date,
@@ -37,6 +39,7 @@ from data_store import (  # noqa: E402
     get_reflections,
     get_today_passage,
     import_passages,
+    join_group_by_code,
     list_members,
     list_passage_dates,
     set_member_leader,
@@ -123,9 +126,50 @@ def _current_member_id():
     return member["id"] if member else None
 
 
+def _current_group_id():
+    """目前這個人屬於哪一組（多小組的核心：所有查詢都以這個為界）。還沒加入任何組就是 None，
+    會被 group gate 導去 /onboarding。"""
+    member = _current_member()
+    return member.get("group_id") if member else None
+
+
 def _current_member_is_muted() -> bool:
     member = _current_member()
     return bool(member and member.get("is_muted"))
+
+
+# group gate 放行的路徑（不需要「已經有小組」就能進）：onboarding 本身、登入/登出、
+# 設定暱稱、健康檢查、離線頁、service worker、靜態檔。其餘頁面都要求先加入一個小組。
+_GROUP_GATE_EXEMPT = (
+    "/onboarding",
+    "/login",
+    "/logout",
+    "/line/callback",
+    "/dev/login",
+    "/settings",
+    "/healthz",
+    "/offline",
+    "/sw.js",
+    "/static",
+    "/favicon",
+)
+
+
+def require_group_gate():
+    """已登入但還沒加入／建立任何小組的人，一律先導去 /onboarding 選加入碼或開新組。
+    這是多小組隔離的入口關卡——沒有 group_id 就看不到任何一組的經文與領受。"""
+    if not require_login():
+        return None
+    path = request.path
+    if any(path == p or path.startswith(p + "/") or path.startswith(p) for p in _GROUP_GATE_EXEMPT):
+        return None
+    if _current_group_id() is None:
+        return redirect(url_for("onboarding"))
+    return None
+
+
+# csrf 之後再掛 group gate：先驗證 CSRF，再決定要不要把沒選組的人導去 onboarding。
+app.before_request(require_group_gate)
 
 
 def _sort_param() -> str:
@@ -200,10 +244,48 @@ def settings():
     )
 
 
+@app.route("/onboarding")
+@login_required
+def onboarding():
+    """還沒加入任何小組的人來的地方：用加入碼加入一個既有小組，或自己開一個新組。
+    任何登入的人都能自助建組（建組的人自動是那一組的輔導）。"""
+    if _current_group_id() is not None:
+        return redirect(url_for("home"))
+    return render_template("onboarding.html", error=request.args.get("err"))
+
+
+def _after_group_joined():
+    """剛加入／建好小組之後：還沒取暱稱就先去取一個，取完（或跳過）再回首頁。"""
+    member = _current_member() or {}
+    if not member.get("nickname"):
+        return redirect(url_for("settings", first="1"))
+    return redirect(url_for("home"))
+
+
+@app.route("/onboarding/join", methods=["POST"])
+@login_required
+def onboarding_join():
+    code = (request.form.get("code") or "").strip()
+    group = join_group_by_code(_current_member_id(), code)
+    if not group:
+        return redirect(url_for("onboarding", err="加入碼不對，跟你的輔導再確認一次（英文大小寫沒差）"))
+    return _after_group_joined()
+
+
+@app.route("/onboarding/create", methods=["POST"])
+@login_required
+def onboarding_create():
+    name = (request.form.get("name") or "").strip()
+    if not name:
+        return redirect(url_for("onboarding", err="幫這個小組取個名字"))
+    create_group(name, _current_member_id())
+    return _after_group_joined()
+
+
 @app.route("/")
 @login_required
 def home():
-    passage = get_today_passage()
+    passage = get_today_passage(_current_group_id())
     if not passage:
         return render_template("no_passage.html")
 
@@ -235,11 +317,16 @@ def submit_reflection():
             return redirect(url_for("history_day", passage_date=passage_date))
         return redirect(url_for("home"))
 
+    gid = _current_group_id()
+
     # 回顧頁：針對指定（過去）的那一段經文留領受，可以標記好幾句、可以寫字，
     # 跟首頁「留下我的領受」是同一件事——只是忙到今天才回來補，不代表當初沒有真的
     # 停下來讀，回頭補的領受一樣是真的領受。
     passage_id = request.form.get("passage_id")
     if passage_id:
+        # 先確認這段經文真的是自己這一組的，擋掉「拿別組的 passage_id 送領受過來」。
+        if get_passage_by_id(passage_id, gid) is None:
+            return redirect(url_for("home"))
         verse_indexes = [int(x) for x in request.form.get("verse_indexes", "").split(",") if x.strip().isdigit()]
         note = (request.form.get("note") or "").strip()
         add_my_reflection(passage_id, _current_member_id(), verse_indexes, note)
@@ -248,7 +335,7 @@ def submit_reflection():
             return redirect(url_for("history_day", passage_date=passage_date))
         return redirect(url_for("history"))
 
-    passage = get_today_passage()
+    passage = get_today_passage(gid)
     if not passage:
         return redirect(url_for("home"))
 
@@ -269,8 +356,10 @@ def submit_reflection():
 @admin_required
 def admin_delete_reflection(reflection_id):
     """輔導移除過激或不當的領受。安靜移除，不公開標記、不通知當事人——
-    這是牧養上的處理，不是公開的懲罰或公審。"""
-    delete_reflection(reflection_id)
+    這是牧養上的處理，不是公開的懲罰或公審。只能移除自己這一組的領受（多小組隔離）。"""
+    # 先確認這則領受屬於自己這一組，A 組輔導不能拿 B 組的 reflection_id 來刪。
+    if get_reflection_by_id(reflection_id, _current_group_id()) is not None:
+        delete_reflection(reflection_id)
     next_url = request.form.get("next") or ""
     if next_url.startswith("/"):
         return redirect(next_url)
@@ -296,6 +385,11 @@ def submit_reaction(reflection_id):
     有 JS 的話回 JSON 讓畫面就地更新（不整頁重整）；沒 JS 就退回一般轉頁。"""
     kind = request.form.get("kind") or None
     my_member_id = _current_member_id()
+    # 只能對自己這一組的領受留反應，擋掉跨組的 reflection_id。
+    if get_reflection_by_id(reflection_id, _current_group_id()) is None:
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return {"reflection_id": reflection_id, "my_reaction_kind": None, "reactions": []}
+        return redirect(url_for("home"))
     set_reaction(reflection_id, my_member_id, kind)
 
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
@@ -318,7 +412,8 @@ def submit_reaction(reflection_id):
 def edit_reflection(reflection_id):
     """改自己留過的某一則領受，不是留新的一則——想留新的一則就直接在首頁／回顧
     再送出一次表單，同一段經文本來就可以留好幾則。"""
-    reflection = get_reflection_by_id(reflection_id)
+    gid = _current_group_id()
+    reflection = get_reflection_by_id(reflection_id, gid)
     my_member_id = _current_member_id()
     if not reflection or reflection.get("member_id") != my_member_id:
         return redirect(url_for("home"))
@@ -328,7 +423,7 @@ def edit_reflection(reflection_id):
     if _current_member_is_muted():
         return redirect(url_for("home"))
 
-    passage = get_passage_by_id(reflection["passage_id"])
+    passage = get_passage_by_id(reflection["passage_id"], gid)
     if not passage:
         return redirect(url_for("home"))
 
@@ -364,12 +459,13 @@ def edit_reflection(reflection_id):
 def reflection_card(reflection_id):
     """把自己的一則領受做成分享圖卡（經文＋領受）。只能做自己的那則。
     圖是前端 canvas 畫的（正式站沒有瀏覽器可以截圖），這裡只給資料。"""
-    reflection = get_reflection_by_id(reflection_id)
+    gid = _current_group_id()
+    reflection = get_reflection_by_id(reflection_id, gid)
     my_member_id = _current_member_id()
     if not reflection or reflection.get("member_id") != my_member_id:
         return redirect(url_for("home"))
 
-    passage = get_passage_by_id(reflection["passage_id"])
+    passage = get_passage_by_id(reflection["passage_id"], gid)
     if not passage:
         return redirect(url_for("home"))
 
@@ -431,7 +527,7 @@ def history():
     first_weekday, days_in_month = monthrange(year, month)  # monthrange: 星期一 = 0
     start_date = date(year, month, 1).isoformat()
     end_date = date(year, month, days_in_month).isoformat()
-    scheduled = list_passage_dates(start_date, end_date)
+    scheduled = list_passage_dates(start_date, end_date, _current_group_id())
 
     today_str = today.isoformat()
     leading_blanks = (first_weekday + 1) % 7  # 轉成台灣慣例的星期日排第一欄
@@ -484,7 +580,7 @@ def history_day(passage_date):
     if passage_date == today_str:
         return redirect(url_for("home"))
 
-    passage = get_passage_by_date(passage_date)
+    passage = get_passage_by_date(passage_date, _current_group_id())
     if not passage:
         return redirect(url_for("history"))
     passage = dict(passage)
@@ -513,10 +609,12 @@ def history_day(passage_date):
 def admin():
     # 刻意只有 GET：排經文一律走「書卷＋章節」或「批次匯入」，經文文字一定從和合本
     # 全文帶出來，輔導不能自己打／改字句——聖經的字句不該被編輯。
-    passage = get_today_passage()
+    gid = _current_group_id()
+    passage = get_today_passage(gid)
     return render_template(
         "admin.html",
         passage=passage,
+        group=get_group(gid),
         user=get_user(),
         saved=request.args.get("saved") == "1",
         imported=request.args.get("imported"),
@@ -566,7 +664,7 @@ def admin_schedule_by_range():
     guiding_question = (request.form.get("guiding_question") or "").strip()
     leader_member_id = _current_member_id()
     passage = set_passage_for_date(
-        passage_date, reference, verses, guiding_question, leader_member_id, verse_labels=verse_labels
+        passage_date, reference, verses, guiding_question, leader_member_id, _current_group_id(), verse_labels=verse_labels
     )
 
     leader_note = (request.form.get("leader_note") or "").strip()
@@ -589,7 +687,7 @@ def admin_import():
         # （見 data_store._resolve_guiding_question）。一次匯入好幾天，不該在
         # 同一個請求裡連續打好幾次 AI，那是拖垮 gunicorn worker timeout 的元兇。
         leader_member_id = _current_member_id()
-        ok_count, save_errors = import_passages(rows, leader_member_id)
+        ok_count, save_errors = import_passages(rows, leader_member_id, _current_group_id())
         errors = parse_errors + save_errors
     except Exception as exc:  # noqa: BLE001 - 上傳檔案格式什麼都可能發生，這裡絕不能整頁 500
         return redirect(url_for("admin", saved=0, err=f"匯入失敗：{exc}"))
@@ -620,7 +718,8 @@ def admin_template():
 @app.route("/admin/leaders")
 @admin_required
 def admin_leaders():
-    members = list_members()
+    # 只列出自己這一組的成員（多小組隔離：輔導只看得到自己這組的人）。
+    members = list_members(_current_group_id())
     for m in members:
         m["is_env_admin"] = is_env_admin(m["line_user_id"])
     return render_template("admin_leaders.html", members=members, current_member_id=_current_member_id())
@@ -632,20 +731,22 @@ def admin_toggle_leader():
     member_id = request.form.get("member_id")
     make_leader = request.form.get("is_leader") == "1"
     # 不能改自己：避免手滑把自己踢出去、後台從此進不去。
+    # 帶 group_id：只能改到自己這一組的成員，不能跨組。
     if member_id and member_id != _current_member_id():
-        set_member_leader(member_id, make_leader)
+        set_member_leader(member_id, make_leader, _current_group_id())
     return redirect(url_for("admin_leaders"))
 
 
 @app.route("/admin/leaders/mute", methods=["POST"])
-@env_admin_required
+@admin_required
 def admin_toggle_mute():
-    """禁言：只有永久管理員（最高權限）能操作，不是任何一個輔導都可以。
-    不是封鎖帳號，禁言的人還是能登入、能讀、能看動態牆，只是不能再留新的領受。"""
+    """禁言：各組輔導可以禁言自己組內的成員——平台方（永久管理員）不可能一個人去管
+    每一組的發言，所以這個權限下放到各組輔導。不是封鎖帳號，禁言的人還是能登入、能讀、
+    能看動態牆，只是不能再留新的領受。帶 group_id：只能禁言自己這一組的人，不能跨組。"""
     member_id = request.form.get("member_id")
     make_muted = request.form.get("is_muted") == "1"
     if member_id and member_id != _current_member_id():
-        set_member_muted(member_id, make_muted)
+        set_member_muted(member_id, make_muted, _current_group_id())
     return redirect(url_for("admin_leaders"))
 
 
@@ -653,7 +754,7 @@ def admin_toggle_mute():
 @login_required
 def export(fmt):
     """Rule 14 數位遺囑模組：一鍵匯出 + 離線閱讀器。"""
-    passage = get_today_passage()
+    passage = get_today_passage(_current_group_id())
     if not passage:
         return Response("今天還沒有經文，沒有東西可以匯出", status=404)
 

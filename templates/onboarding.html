@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}加入一個小組{% endblock %}
+
+{% block content %}
+<div class="screen">
+
+  <header class="home-header">
+    <h1>先加入一個小組</h1>
+    <p class="admin-hint" style="margin-top:.4rem;">
+      這裡的經文與領受，只有同一個小組的人看得到。用你們小組的加入碼加入，或自己開一個新的。
+    </p>
+  </header>
+
+  {% if error %}
+  <div class="submitted-banner submitted-banner--warn">
+    <p>{{ error }}</p>
+  </div>
+  {% endif %}
+
+  <section class="passage-card">
+    <h2 class="admin-section-title">我有加入碼</h2>
+    <p class="admin-hint" style="margin-top:0;">跟你的小組輔導拿一串六碼的加入碼，貼進來就好。</p>
+    <form class="admin-form" method="post" action="{{ url_for('onboarding_join') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label class="admin-label" for="code">加入碼</label>
+      <input class="admin-input" type="text" id="code" name="code"
+             placeholder="例如 K7M2PQ" autocapitalize="characters" autocomplete="off"
+             maxlength="12" style="letter-spacing:.15em; text-transform:uppercase;">
+      <button type="submit" class="btn btn--primary">加入這個小組</button>
+    </form>
+  </section>
+
+  <section class="passage-card">
+    <h2 class="admin-section-title">我要開一個新的小組</h2>
+    <p class="admin-hint" style="margin-top:0;">
+      開好之後你就是這一組的輔導，可以排經文、拿到一串加入碼分享給組員。
+    </p>
+    <form class="admin-form" method="post" action="{{ url_for('onboarding_create') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label class="admin-label" for="name">小組名字</label>
+      <input class="admin-input" type="text" id="name" name="name"
+             placeholder="例如 週五學青小組" maxlength="40">
+      <button type="submit" class="btn btn--ghost">建立小組</button>
+    </form>
+  </section>
+
+  <a class="link-quiet" href="{{ url_for('auth.logout') }}">先登出</a>
+
+</div>
+{% endblock %}

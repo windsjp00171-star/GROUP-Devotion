@@ -5,6 +5,7 @@
 """
 
 import os
+import secrets
 import uuid
 
 import ai_guide
@@ -13,6 +14,13 @@ from supabase_client import sb
 
 DEFAULT_GROUP_NAME = "恩典少年"
 DEFAULT_GUIDING_QUESTION = "哪一句話，也讓你想停下腳步？"
+
+# 加入碼用的字元集，刻意去掉容易看錯的 0/O/1/I，讓人手動輸入不容易打錯。
+_JOIN_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+
+def _generate_join_code(length: int = 6) -> str:
+    return "".join(secrets.choice(_JOIN_CODE_ALPHABET) for _ in range(length))
 
 # 對別人領受的反應，固定幾種、各自對應一句寫死的鼓勵語，不是自由留言——
 # 自由留言在青少年小組的靈修內容底下風險較高，怕不小心引發論戰。
@@ -36,8 +44,16 @@ _BLOOM_COLORS = ["#EFC26B", "#E8A98A", "#E2916A", "#D9B36C", "#E0A75E"]
 # 記憶體示範模式的狀態。故意跟真正接 Supabase 之後的行為一致：
 # 一開始「今天還沒有人排經文」，要先在 /admin 排一次才會出現——
 # 不是內建一段固定範例硬掛著，這樣本機測試走的才是跟正式站一樣的路徑。
-_demo_group = {"id": "demo-group", "name": DEFAULT_GROUP_NAME}
-_demo_passage: dict | None = None
+#
+# 多小組：示範模式也要能同時存在好幾組，才測得出「A 組看不到 B 組」的隔離。
+#   _demo_groups      : {group_id: {id, name, join_code}}
+#   _demo_members     : {line_user_id: 成員 dict（含 group_id，null = 還沒加入任何組）}
+#   _demo_passages    : [經文 dict（各自帶 group_id、passage_date）]
+#   _demo_reflections : [領受 dict（各自帶 passage_id）]
+_DEMO_GROUP_ID = "demo-group"
+_demo_groups: dict[str, dict] = {}
+_demo_members: dict[str, dict] = {}
+_demo_passages: list[dict] = []
 _demo_reflections: list[dict] = []
 _demo_reactions: list[dict] = []
 
@@ -46,30 +62,75 @@ def _demo_mode() -> bool:
     return sb is None
 
 
+def _demo_member(
+    line_user_id: str,
+    group_id: str | None,
+    *,
+    is_leader: bool = False,
+    is_muted: bool = False,
+    display_name: str = "",
+    nickname: str | None = None,
+) -> dict:
+    return {
+        "id": f"demo-{line_user_id}",
+        "line_user_id": line_user_id,
+        "group_id": group_id,
+        "is_leader": is_leader,
+        "is_muted": is_muted,
+        "display_name": display_name,
+        "nickname": nickname,
+    }
+
+
+def _find_demo_passage(group_id: str, passage_date: str) -> dict | None:
+    return next(
+        (p for p in _demo_passages if p["group_id"] == group_id and p["passage_date"] == passage_date), None
+    )
+
+
 def seed_demo_data() -> None:
-    """本機快速預覽用：灌一段範例經文＋幾則示範領受，讓人一打開就看得到畫面長什麼樣。
-    只在記憶體示範模式（沒接 Supabase）時有效果，正式站接了 Supabase 之後這個函式不會做任何事。
+    """本機快速預覽用：灌一組示範小組＋一段範例經文＋幾則示範領受，讓人一打開就看得到
+    畫面長什麼樣。只在記憶體示範模式（沒接 Supabase）時有效果，正式站接了 Supabase
+    之後這個函式不會做任何事。
     """
-    global _demo_passage, _demo_reflections
+    global _demo_groups, _demo_members, _demo_passages, _demo_reflections, _demo_reactions
     if not _demo_mode():
         return
 
-    _demo_passage = {
-        "id": "demo-passage",
-        "reference": "路加福音 24:13–17 · 以馬忤斯路上",
-        "verses": [
-            "正當那日，門徒中有兩個人往一個村子去，這村子名叫以馬忤斯，離耶路撒冷約有二十五里。",
-            "他們彼此談論所遇見的這一切事。",
-            "正談論相問的時候，耶穌親自就近他們，和他們同行。",
-            "只是他們的眼睛迷糊了，不認得他。",
-            "耶穌對他們說，你們走路彼此談論的是什麼事呢，你們為什麼愁容滿面呢。",
-        ],
-        "verse_labels": ["24:13", "24:14", "24:15", "24:16", "24:17"],
-        "guiding_question": DEFAULT_GUIDING_QUESTION,
+    _demo_groups = {_DEMO_GROUP_ID: {"id": _DEMO_GROUP_ID, "name": DEFAULT_GROUP_NAME, "join_code": "DEMO01"}}
+    # 常用的測試身分（本機 /dev/login、pytest 直接注入 session 的那些人）預設就已經在
+    # 示範小組裡，這樣既有流程不用每次都先走一次 onboarding。真正沒加入過的新 line id
+    # （不在這份名單裡）get_member_by_line_id 會回 None → 被導去 /onboarding。
+    _demo_members = {
+        "test-user": _demo_member("test-user", _DEMO_GROUP_ID, display_name="測試", nickname="小組員"),
+        "test-admin": _demo_member(
+            "test-admin", _DEMO_GROUP_ID, is_leader=True, display_name="輔導", nickname="輔導"
+        ),
+        "dev-user": _demo_member(
+            "dev-user", _DEMO_GROUP_ID, is_leader=True, display_name="你（測試用）", nickname="你"
+        ),
     }
+    _demo_passages = [
+        {
+            "id": "demo-passage",
+            "group_id": _DEMO_GROUP_ID,
+            "passage_date": local_time.today().isoformat(),
+            "reference": "路加福音 24:13–17 · 以馬忤斯路上",
+            "verses": [
+                "正當那日，門徒中有兩個人往一個村子去，這村子名叫以馬忤斯，離耶路撒冷約有二十五里。",
+                "他們彼此談論所遇見的這一切事。",
+                "正談論相問的時候，耶穌親自就近他們，和他們同行。",
+                "只是他們的眼睛迷糊了，不認得他。",
+                "耶穌對他們說，你們走路彼此談論的是什麼事呢，你們為什麼愁容滿面呢。",
+            ],
+            "verse_labels": ["24:13", "24:14", "24:15", "24:16", "24:17"],
+            "guiding_question": DEFAULT_GUIDING_QUESTION,
+        }
+    ]
     _demo_reflections = [
         {
             "id": str(uuid.uuid4()),
+            "passage_id": "demo-passage",
             "member_id": "demo-思彤",
             "name": "思彤",
             "verse_indexes": [3],
@@ -79,6 +140,7 @@ def seed_demo_data() -> None:
         },
         {
             "id": str(uuid.uuid4()),
+            "passage_id": "demo-passage",
             "member_id": "demo-柏睿",
             "name": "柏睿",
             "verse_indexes": [2],
@@ -88,6 +150,7 @@ def seed_demo_data() -> None:
         },
         {
             "id": str(uuid.uuid4()),
+            "passage_id": "demo-passage",
             "member_id": "demo-瑀彤",
             "name": "瑀彤",
             "verse_indexes": [4, 3],
@@ -97,6 +160,7 @@ def seed_demo_data() -> None:
         },
         {
             "id": str(uuid.uuid4()),
+            "passage_id": "demo-passage",
             "member_id": "demo-柏諺",
             "name": "柏諺",
             "verse_indexes": [0],
@@ -105,6 +169,7 @@ def seed_demo_data() -> None:
             "color": "#E2916A",
         },
     ]
+    _demo_reactions = []
 
 
 if _demo_mode() and os.environ.get("SEED_DEMO_DATA", "1") != "0":
@@ -167,34 +232,96 @@ def _insert_reflection_with_fallback(payload: dict):
         raise
 
 
-# ---------- group ----------
+# ---------- group（多小組：每個人屬於一組，靠加入碼加入／建立） ----------
 
 
-def get_or_create_default_group() -> dict:
+def get_group(group_id: str | None) -> dict | None:
+    if not group_id:
+        return None
     if _demo_mode():
-        return _demo_group
+        return _demo_groups.get(group_id)
+    result = sb.table("groups").select("*").eq("id", group_id).limit(1).execute()
+    return result.data[0] if result.data else None
 
-    existing = sb.table("groups").select("*").limit(1).execute()
-    if existing.data:
-        return existing.data[0]
-    created = sb.table("groups").insert({"name": DEFAULT_GROUP_NAME}).execute()
-    return created.data[0]
+
+def get_group_by_code(code: str) -> dict | None:
+    """用加入碼找小組，找不到回 None。加入碼一律轉大寫比對。"""
+    code = (code or "").strip().upper()
+    if not code:
+        return None
+    if _demo_mode():
+        return next((g for g in _demo_groups.values() if (g.get("join_code") or "").upper() == code), None)
+    result = sb.table("groups").select("*").eq("join_code", code).limit(1).execute()
+    return result.data[0] if result.data else None
+
+
+def _set_demo_member_group(member_id: str, group_id: str, *, is_leader: bool) -> None:
+    for m in _demo_members.values():
+        if m["id"] == member_id:
+            m["group_id"] = group_id
+            m["is_leader"] = is_leader
+            return
+
+
+def create_group(name: str, member_id: str) -> dict:
+    """建一個新小組：建立者自動成為這一組的輔導（is_leader）。任何登入的人都能自助建組。
+    回傳新建立的 group（含加入碼，可以分享給組員）。"""
+    name = (name or "").strip() or DEFAULT_GROUP_NAME
+
+    if _demo_mode():
+        group_id = f"demo-group-{uuid.uuid4().hex[:8]}"
+        _demo_groups[group_id] = {"id": group_id, "name": name, "join_code": _generate_join_code()}
+        _set_demo_member_group(member_id, group_id, is_leader=True)
+        return _demo_groups[group_id]
+
+    # 產生一組還沒被用過的加入碼（碰撞機率極低，重試幾次就夠）。
+    code = _generate_join_code()
+    for _ in range(10):
+        if not get_group_by_code(code):
+            break
+        code = _generate_join_code()
+    created = sb.table("groups").insert({"name": name, "join_code": code}).execute()
+    group = created.data[0]
+    sb.table("members").update({"group_id": group["id"], "is_leader": True}).eq("id", member_id).execute()
+    return group
+
+
+def join_group_by_code(member_id: str, code: str) -> dict | None:
+    """用加入碼加入既有小組（加入的人是一般成員，不是輔導）。加入碼找不到回 None。"""
+    group = get_group_by_code(code)
+    if not group:
+        return None
+
+    if _demo_mode():
+        _set_demo_member_group(member_id, group["id"], is_leader=False)
+        return group
+
+    sb.table("members").update({"group_id": group["id"], "is_leader": False}).eq("id", member_id).execute()
+    return group
 
 
 # ---------- members ----------
 
 
 def upsert_member(user: dict) -> dict:
-    """LINE 登入成功後呼叫：把這個人存進小組成員名單（已存在就更新資料）。"""
+    """LINE 登入成功後呼叫：把這個人存進成員名單（已存在就更新基本資料）。
+    刻意不在這裡指定 group_id——剛登入的新成員 group_id 是 null，之後在 /onboarding
+    自己選「用加入碼加入」或「建一個新組」才會有值；回頭登入的舊成員則保留原本的 group_id
+    （upsert 沒把 group_id 列進去，衝突更新時不會被蓋掉）。"""
     if _demo_mode():
-        return {"id": f"demo-{user['line_user_id']}", **user}
+        line_user_id = user["line_user_id"]
+        existing = _demo_members.get(line_user_id)
+        if existing:
+            existing["display_name"] = user.get("display_name") or existing.get("display_name") or ""
+            return existing
+        member = _demo_member(line_user_id, None, display_name=user.get("display_name") or "")
+        _demo_members[line_user_id] = member
+        return member
 
-    group = get_or_create_default_group()
     result = (
         sb.table("members")
         .upsert(
             {
-                "group_id": group["id"],
                 "line_user_id": user["line_user_id"],
                 "display_name": user.get("display_name") or "",
                 "picture_url": user.get("picture_url"),
@@ -208,37 +335,52 @@ def upsert_member(user: dict) -> dict:
 
 def get_member_by_line_id(line_user_id: str) -> dict | None:
     if _demo_mode():
-        return {"id": f"demo-{line_user_id}", "is_leader": False, "is_muted": False}
+        return _demo_members.get(line_user_id)
 
     result = sb.table("members").select("*").eq("line_user_id", line_user_id).limit(1).execute()
     return result.data[0] if result.data else None
 
 
-def list_members() -> list[dict]:
-    """小組所有成員，管理輔導名單用。"""
-    if _demo_mode():
+def list_members(group_id: str) -> list[dict]:
+    """某一組的所有成員，管理輔導名單／禁言用。只列出這一組的人（多小組隔離：
+    輔導只看得到、也只管得到自己這一組的成員）。"""
+    if not group_id:
         return []
+    if _demo_mode():
+        return [m for m in _demo_members.values() if m.get("group_id") == group_id]
 
-    group = get_or_create_default_group()
-    result = sb.table("members").select("*").eq("group_id", group["id"]).order("created_at").execute()
+    result = sb.table("members").select("*").eq("group_id", group_id).order("created_at").execute()
     return result.data
 
 
-def set_member_leader(member_id: str, is_leader: bool) -> None:
-    """在後台把某個成員設成／取消輔導。"""
+def set_member_leader(member_id: str, is_leader: bool, group_id: str | None = None) -> None:
+    """把某個成員設成／取消輔導。傳 group_id 就一起篩，確保只能改到自己這一組的成員
+    （多小組隔離：A 組輔導不能去改 B 組的人）。"""
     if _demo_mode():
+        for m in _demo_members.values():
+            if m["id"] == member_id and (group_id is None or m.get("group_id") == group_id):
+                m["is_leader"] = is_leader
         return
-    sb.table("members").update({"is_leader": is_leader}).eq("id", member_id).execute()
+    query = sb.table("members").update({"is_leader": is_leader}).eq("id", member_id)
+    if group_id is not None:
+        query = query.eq("group_id", group_id)
+    query.execute()
 
 
-def set_member_muted(member_id: str, is_muted: bool) -> None:
+def set_member_muted(member_id: str, is_muted: bool, group_id: str | None = None) -> None:
     """禁言：不是封鎖帳號，還是能登入、能讀、能看動態牆，只是不能再留新的領受
-    （也不能編輯舊的）。只有最高權限（永久管理員）能操作，見 auth.env_admin_required。
-    """
+    （也不能編輯舊的）。各組輔導可以禁言自己組內的成員（平台方不可能一個人管所有組），
+    傳 group_id 就一起篩，確保只動得到自己這一組的人。"""
     if _demo_mode():
+        for m in _demo_members.values():
+            if m["id"] == member_id and (group_id is None or m.get("group_id") == group_id):
+                m["is_muted"] = is_muted
         return
     try:
-        sb.table("members").update({"is_muted": is_muted}).eq("id", member_id).execute()
+        query = sb.table("members").update({"is_muted": is_muted}).eq("id", member_id)
+        if group_id is not None:
+            query = query.eq("group_id", group_id)
+        query.execute()
     except Exception as exc:  # noqa: BLE001 - 只在明確是「欄位不存在」時安靜放棄
         message = getattr(exc, "message", None) or str(exc)
         if getattr(exc, "code", None) == "PGRST204" and "'is_muted'" in message:
@@ -262,17 +404,21 @@ def _display_name(member_row: dict | None) -> str:
 # ---------- 今天這段經文 ----------
 
 
-def get_today_passage() -> dict | None:
-    """回傳今天這段經文；如果小組今天還沒有輔導排經文，回傳 None。"""
+def get_today_passage(group_id: str) -> dict | None:
+    """回傳某一組今天這段經文；如果這組今天還沒有輔導排經文（或還沒選組），回傳 None。
+    多小組隔離：一定要指定是哪一組，不會有「全站共用的今天」。"""
+    if not group_id:
+        return None
+    today = local_time.today().isoformat()
     if _demo_mode():
-        return _resolve_guiding_question(_demo_passage) if _demo_passage else None
+        passage = _find_demo_passage(group_id, today)
+        return _resolve_guiding_question(passage) if passage else None
 
-    group = get_or_create_default_group()
     result = (
         sb.table("daily_passages")
         .select("*")
-        .eq("group_id", group["id"])
-        .eq("passage_date", local_time.today().isoformat())
+        .eq("group_id", group_id)
+        .eq("passage_date", today)
         .limit(1)
         .execute()
     )
@@ -293,10 +439,7 @@ def _resolve_guiding_question(passage: dict) -> dict:
     question = question or DEFAULT_GUIDING_QUESTION
     passage["guiding_question"] = question
 
-    if _demo_mode():
-        if _demo_passage and _demo_passage.get("id") == passage.get("id"):
-            _demo_passage["guiding_question"] = question
-    else:
+    if not _demo_mode():
         sb.table("daily_passages").update({"guiding_question": question}).eq("id", passage["id"]).execute()
 
     return passage
@@ -308,10 +451,11 @@ def set_passage_for_date(
     verses: list[str],
     guiding_question: str,
     leader_member_id: str,
+    group_id: str,
     verse_labels: list[str] | None = None,
 ) -> dict:
-    """排定某一天的經文（不限今天，讓輔導可以一次排好接下來好幾天）。
-    已經排過同一天就更新，不會重複長出第二筆。
+    """排定某一組某一天的經文（不限今天，讓輔導可以一次排好接下來好幾天）。
+    已經排過同一組同一天就更新，不會重複長出第二筆。
     引導問題留空就先存空的，等真的被打開那天再生（見 _resolve_guiding_question）。
     verse_labels 是每一句對應的節號（像 '9:13'），畫面上經文前面顯示節號用；
     手動貼經文那條路沒有節號可以配，留 None 就好，畫面上就不顯示節號。
@@ -326,16 +470,20 @@ def set_passage_for_date(
     }
 
     if _demo_mode():
-        global _demo_passage, _demo_reflections
-        if passage_date == local_time.today().isoformat():
-            # 換了一段新的經文，昨天那批領受不該掛在新的一段底下。
-            if _demo_passage is None or _demo_passage.get("reference") != reference:
-                _demo_reflections = []
-            _demo_passage = {"id": "demo-passage", **payload}
-        return {"id": "demo-passage", **payload}
+        global _demo_reflections
+        existing = _find_demo_passage(group_id, passage_date)
+        passage_id = existing["id"] if existing else f"demo-passage-{uuid.uuid4().hex[:8]}"
+        # 換了一段新的經文，原本那批領受不該掛在新的一段底下。
+        if existing and existing.get("reference") != reference:
+            _demo_reflections = [r for r in _demo_reflections if r.get("passage_id") != passage_id]
+        new_passage = {"id": passage_id, "group_id": group_id, **payload}
+        if existing:
+            _demo_passages[_demo_passages.index(existing)] = new_passage
+        else:
+            _demo_passages.append(new_passage)
+        return new_passage
 
-    group = get_or_create_default_group()
-    payload["group_id"] = group["id"]
+    payload["group_id"] = group_id
     result = _upsert_with_fallback(
         "daily_passages", payload, on_conflict="group_id,passage_date", optional_keys=["verse_labels"]
     )
@@ -343,15 +491,26 @@ def set_passage_for_date(
 
 
 def set_today_passage(
-    reference: str, verses: list[str], guiding_question: str, leader_member_id: str, verse_labels: list[str] | None = None
+    reference: str,
+    verses: list[str],
+    guiding_question: str,
+    leader_member_id: str,
+    group_id: str,
+    verse_labels: list[str] | None = None,
 ) -> dict:
     """輔導種頭香：排定今天這段經文。"""
     return set_passage_for_date(
-        local_time.today().isoformat(), reference, verses, guiding_question, leader_member_id, verse_labels=verse_labels
+        local_time.today().isoformat(),
+        reference,
+        verses,
+        guiding_question,
+        leader_member_id,
+        group_id,
+        verse_labels=verse_labels,
     )
 
 
-def import_passages(rows: list[dict], leader_member_id: str) -> tuple[int, list[str]]:
+def import_passages(rows: list[dict], leader_member_id: str, group_id: str) -> tuple[int, list[str]]:
     """批次排經文：每一列 {date, reference, verses, verse_labels, guiding_question}。
     回傳 (成功筆數, 失敗列的錯誤訊息)。
 
@@ -374,6 +533,7 @@ def import_passages(rows: list[dict], leader_member_id: str) -> tuple[int, list[
                     row["verses"],
                     row.get("guiding_question", ""),
                     leader_member_id,
+                    group_id,
                     verse_labels=row.get("verse_labels"),
                 )
                 ok += 1
@@ -381,10 +541,9 @@ def import_passages(rows: list[dict], leader_member_id: str) -> tuple[int, list[
                 errors.append(f"{row.get('date', '?')}：{exc}")
         return ok, errors
 
-    group = get_or_create_default_group()
     payloads = [
         {
-            "group_id": group["id"],
+            "group_id": group_id,
             "passage_date": row["date"],
             "reference": row["reference"],
             "verses": row["verses"],
@@ -407,19 +566,22 @@ def import_passages(rows: list[dict], leader_member_id: str) -> tuple[int, list[
 # ---------- 回顧（往回看排過的日子，不是往前排） ----------
 
 
-def list_passage_dates(start_date: str, end_date: str) -> set[str]:
-    """某個日期範圍內，小組排過經文的日期，畫回顧月曆用——知道哪幾天可以點進去。"""
+def list_passage_dates(start_date: str, end_date: str, group_id: str) -> set[str]:
+    """某一組在某個日期範圍內排過經文的日期，畫回顧月曆用——知道哪幾天可以點進去。
+    只看這一組排過的日子（多小組隔離）。"""
+    if not group_id:
+        return set()
     if _demo_mode():
-        if not _demo_passage:
-            return set()
-        d = _demo_passage.get("passage_date") or local_time.today().isoformat()
-        return {d} if start_date <= d <= end_date else set()
+        return {
+            p["passage_date"]
+            for p in _demo_passages
+            if p["group_id"] == group_id and start_date <= p["passage_date"] <= end_date
+        }
 
-    group = get_or_create_default_group()
     result = (
         sb.table("daily_passages")
         .select("passage_date")
-        .eq("group_id", group["id"])
+        .eq("group_id", group_id)
         .gte("passage_date", start_date)
         .lte("passage_date", end_date)
         .execute()
@@ -427,21 +589,19 @@ def list_passage_dates(start_date: str, end_date: str) -> set[str]:
     return {row["passage_date"] for row in result.data}
 
 
-def get_passage_by_date(passage_date: str) -> dict | None:
-    """回顧用：拿某一天排定的經文（不限今天），沒排過就回 None。
+def get_passage_by_date(passage_date: str, group_id: str) -> dict | None:
+    """回顧用：拿某一組某一天排定的經文（不限今天），沒排過就回 None。
     故意不呼叫 AI 補引導問題——回顧是隨手往回翻，不該在瀏覽當下才觸發生成。
     """
+    if not group_id:
+        return None
     if _demo_mode():
-        if not _demo_passage:
-            return None
-        d = _demo_passage.get("passage_date") or local_time.today().isoformat()
-        return _demo_passage if d == passage_date else None
+        return _find_demo_passage(group_id, passage_date)
 
-    group = get_or_create_default_group()
     result = (
         sb.table("daily_passages")
         .select("*")
-        .eq("group_id", group["id"])
+        .eq("group_id", group_id)
         .eq("passage_date", passage_date)
         .limit(1)
         .execute()
@@ -459,7 +619,8 @@ def get_reflections(passage_id: str, my_member_id: str | None = None, sort: str 
     """
     if _demo_mode():
         # 複製一份，不要讓下面正規化 verse_indexes 的動作改到記憶體示範資料本身。
-        items = [dict(r) for r in _demo_reflections]
+        # 只回這一段經文底下的領受（用 passage_id 篩），別組的經文自然看不到。
+        items = [dict(r) for r in _demo_reflections if r.get("passage_id") == passage_id]
         if sort == "desc":
             items = list(reversed(items))
     else:
@@ -506,23 +667,25 @@ def get_my_reflections(member_id: str, sort: str = "desc") -> list[dict]:
         return []
 
     if _demo_mode():
+        by_id = {p["id"]: p for p in _demo_passages}
         mine = [r for r in _demo_reflections if r["member_id"] == member_id]
-        p = _demo_passage or {}
-        items = [
-            {
-                "id": r["id"],
-                "passage_id": p.get("id"),
-                "passage_date": p.get("passage_date") or local_time.today().isoformat(),
-                "reference": p.get("reference", ""),
-                "verses": p.get("verses", []),
-                "verse_labels": p.get("verse_labels"),
-                "verse_indexes": r.get("verse_indexes") or [],
-                "note": r.get("note", ""),
-                "kind": r.get("kind", "flower"),
-                "color": r.get("color", "#EFC26B"),
-            }
-            for r in mine
-        ]
+        items = []
+        for r in mine:
+            p = by_id.get(r.get("passage_id"), {})
+            items.append(
+                {
+                    "id": r["id"],
+                    "passage_id": p.get("id"),
+                    "passage_date": p.get("passage_date") or local_time.today().isoformat(),
+                    "reference": p.get("reference", ""),
+                    "verses": p.get("verses", []),
+                    "verse_labels": p.get("verse_labels"),
+                    "verse_indexes": r.get("verse_indexes") or [],
+                    "note": r.get("note", ""),
+                    "kind": r.get("kind", "flower"),
+                    "color": r.get("color", "#EFC26B"),
+                }
+            )
         if sort == "desc":
             items.reverse()
         return items
@@ -555,12 +718,20 @@ def get_my_reflections(member_id: str, sort: str = "desc") -> list[dict]:
     return items
 
 
-def get_reflection_by_id(reflection_id: str) -> dict | None:
-    """編輯領受用：拿單一則領受的原始資料（不含 name/mine 這些畫面加工過的欄位）。"""
+def get_reflection_by_id(reflection_id: str, group_id: str | None = None) -> dict | None:
+    """編輯領受用：拿單一則領受的原始資料（不含 name/mine 這些畫面加工過的欄位）。
+    傳 group_id 就順便擋掉跨組存取——這則領受所屬的那段經文如果不是這一組的，回 None，
+    就算有人拿別組的 reflection_id 直接打網址也讀不到（多小組隔離）。"""
     if _demo_mode():
-        return next((r for r in _demo_reflections if r["id"] == reflection_id), None)
-    result = sb.table("reflections").select("*").eq("id", reflection_id).limit(1).execute()
-    return result.data[0] if result.data else None
+        reflection = next((r for r in _demo_reflections if r["id"] == reflection_id), None)
+    else:
+        result = sb.table("reflections").select("*").eq("id", reflection_id).limit(1).execute()
+        reflection = result.data[0] if result.data else None
+
+    if reflection and group_id is not None:
+        if get_passage_by_id(reflection.get("passage_id"), group_id) is None:
+            return None
+    return reflection
 
 
 def add_my_reflection(passage_id: str, member_id: str, verse_indexes: list[int] | None, note: str) -> dict:
@@ -732,9 +903,18 @@ def export_passage(passage_id: str) -> dict:
     }
 
 
-def get_passage_by_id(passage_id: str) -> dict | None:
-    """用 id 直接拿一段經文（不限今天）——編輯領受、匯出都要知道自己是針對哪一段。"""
+def get_passage_by_id(passage_id: str, group_id: str | None = None) -> dict | None:
+    """用 id 直接拿一段經文（不限今天）——編輯領受、匯出都要知道自己是針對哪一段。
+    傳 group_id 就一起比對：這段經文不是這一組的就回 None，擋掉「拿別組的 passage_id
+    直接打網址」的跨組存取（多小組隔離）。"""
+    if not passage_id:
+        return None
     if _demo_mode():
-        return _demo_passage if _demo_passage and _demo_passage.get("id") == passage_id else None
-    result = sb.table("daily_passages").select("*").eq("id", passage_id).limit(1).execute()
-    return result.data[0] if result.data else None
+        passage = next((p for p in _demo_passages if p["id"] == passage_id), None)
+    else:
+        result = sb.table("daily_passages").select("*").eq("id", passage_id).limit(1).execute()
+        passage = result.data[0] if result.data else None
+
+    if passage and group_id is not None and passage.get("group_id") != group_id:
+        return None
+    return passage

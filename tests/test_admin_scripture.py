@@ -23,7 +23,7 @@ def test_schedule_by_range_pulls_canonical(admin, csrf):
         data={"csrf_token": token, "book": "路加福音", "range": "24:13-17", "subtitle": "以馬忤斯路上"},
         follow_redirects=True,
     )
-    p = data_store.get_today_passage()
+    p = data_store.get_today_passage(data_store._DEMO_GROUP_ID)
     assert p["reference"] == "路加福音 24:13-17 · 以馬忤斯路上"
     assert p["verses"][0].startswith("正當那日")  # 正版和合本，不是輔導打的
     assert p["verse_labels"][0] == "24:13"

@@ -38,10 +38,8 @@ def app():
 
 @pytest.fixture(autouse=True)
 def reset_demo():
-    """每個測試前重置記憶體示範資料，測試之間互不影響。"""
-    data_store._demo_passage = None
-    data_store._demo_reflections = []
-    data_store._demo_reactions = []
+    """每個測試前重置記憶體示範資料，測試之間互不影響。
+    seed_demo_data() 會把 groups / members / passages / reflections / reactions 全部重建。"""
     data_store.seed_demo_data()
     yield
 
