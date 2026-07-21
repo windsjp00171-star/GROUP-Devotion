@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}安心使用 · 我們怎麼對待你的領受{% endblock %}
+
+{% block content %}
+<div class="screen">
+
+  <header class="home-header">
+    <p class="eyebrow">安心使用聲明</p>
+    <h1>我們怎麼對待你的領受</h1>
+    <p class="admin-hint" style="margin-top:.4rem;">
+      這是一個給學青小組共讀聖經、留下領受的小工具。下面老實講清楚：這個系統做什麼、
+      刻意不做什麼，還有我們做了哪些資安管控。你可以先讀完再決定要不要用。
+    </p>
+  </header>
+
+  <section class="passage-card">
+    <h2 class="admin-section-title">這個系統做什麼</h2>
+    <ul class="trust-list">
+      <li><strong>登入只拿最小資料。</strong>用 LINE 登入，只取得你的顯示名稱、大頭貼和一組帳號代碼（只要求 <code>profile</code> 這一種權限）——不會拿到你的 email、電話、通訊錄，也不會用你的帳號發任何訊息。</li>
+      <li><strong>名字可以不是本名。</strong>你可以設一個暱稱，動態牆上就顯示暱稱；不想用本名分享也沒關係。</li>
+      <li><strong>你的領受只有「同一個小組」的人看得到。</strong>每個小組靠一組加入碼各自獨立，你只會看到自己這一組的經文與領受，別組看不到你的、你也看不到別組的。</li>
+      <li><strong>可以隨時把資料帶走。</strong>一鍵匯出成 JSON／CSV，或產生一頁不需要網路就能打開的離線閱讀器另存到自己電腦。這些領受是你們的，不是被鎖在這裡的。</li>
+      <li><strong>可以自己刪掉自己的領受。</strong>寫了後悔的東西，本人隨時可以收回。</li>
+    </ul>
+  </section>
+
+  <section class="passage-card">
+    <h2 class="admin-section-title">這個系統刻意不做什麼</h2>
+    <ul class="trust-list">
+      <li><strong>沒有打卡、沒有進度條、沒有連續天數。</strong>忙到今天才回來補，回頭補的領受一樣是真的領受，不會被標記成「你缺席了」。</li>
+      <li><strong>沒有排行榜、沒有「誰讀得多」。</strong>排序只有時間新舊，不是比賽。</li>
+      <li><strong>沒有已讀未讀、沒有催讀通知。</strong>不會有人知道你今天有沒有打開，也不會跳訊息催你。</li>
+      <li><strong>不賣資料、沒有廣告、非商業。</strong>這是一個個人專案，不靠你的資料賺錢。</li>
+      <li><strong>輔導的管理是牧養式的，不是公審。</strong>移除不當內容是安靜處理、不公開標記、不通知圍觀；禁言不是封鎖帳號，被禁言的人還是能登入、能讀、能看動態牆，只是暫時不能再留新的領受。</li>
+    </ul>
+  </section>
+
+  <section class="passage-card">
+    <h2 class="admin-section-title">我們做了哪些資安管控</h2>
+    <ul class="trust-list">
+      <li><strong>程式碼公開可檢視（開源，MIT）。</strong>你不用「相信我說的」，可以直接看它到底怎麼運作。所有金鑰都放在環境變數、不寫進程式碼，公開的版本庫從頭到尾沒有任何憑證。</li>
+      <li><strong>多小組隔離，每一次查詢都以「你這一組」為界。</strong>就算有人拿到別組的網址參數直接輸入，也讀不到、留不了、按不了別組的內容——這件事有自動化測試每次都跑一遍守著。</li>
+      <li><strong>登入狀態不可被偽造。</strong>正式站一定要設一組隨機密鑰才准啟動，否則直接拒絕上線，避免有人偽造身分冒充管理員。</li>
+      <li><strong>Cookie 有加固。</strong>HttpOnly（JavaScript 拿不到）、SameSite（降低跨站攻擊）、正式站只走 HTTPS。</li>
+      <li><strong>所有寫入動作都有 CSRF 保護。</strong>留領受、排經文這些動作都要通過一次性權杖，擋掉「被別的網站偷偷代送出」的攻擊。</li>
+      <li><strong>匯出的 CSV 有防公式注入。</strong>你打的字不會在別人用 Excel 打開匯出檔時被當成公式執行。</li>
+      <li><strong>資料庫預設一律拒絕。</strong>資料庫開了列級安全（RLS）且不開任何直接存取，只有後端伺服器能碰，前端不會、也不能直接連資料庫。</li>
+      <li><strong>測試永遠不碰正式資料。</strong>自動化測試從設計上就強制跑在記憶體模式，不可能連到或寫到正式站的資料庫。</li>
+    </ul>
+  </section>
+
+  <section class="passage-card">
+    <h2 class="admin-section-title">如果有一天這個服務收掉了</h2>
+    <p class="admin-hint" style="margin-top:0;">
+      這個工具存的是一整個小組對神的領受，服務停掉不該讓這些記憶跟著蒸發。所以「一鍵匯出」和
+      「離線閱讀器」現在就能用——只要能打開瀏覽器、能存檔案，不需要懂程式，就能把這些領受
+      留下來、交給下一個接手的人。
+    </p>
+  </section>
+
+  {% if current_user %}
+  <a class="link-quiet" href="{{ url_for('home') }}">回到今天這段</a>
+  {% else %}
+  <a class="link-quiet" href="{{ url_for('auth.login') }}">用 LINE 登入，開始試試看</a>
+  {% endif %}
+
+</div>
+{% endblock %}

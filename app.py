@@ -148,6 +148,7 @@ _GROUP_GATE_EXEMPT = (
     "/line/callback",
     "/dev/login",
     "/settings",
+    "/about",
     "/healthz",
     "/offline",
     "/sw.js",
@@ -211,6 +212,13 @@ def healthz():
 def offline():
     """PWA 離線時 service worker 顯示的頁面，不用登入（離線時也不可能驗證）。"""
     return render_template("offline.html")
+
+
+@app.route("/about")
+def about():
+    """安心使用聲明 ＋ 資安管控聲明。刻意不用登入——想試用的人可以先讀完這頁，
+    了解這個系統做什麼、不做什麼、以及我們做了哪些資安管控，再決定要不要登入。"""
+    return render_template("about.html")
 
 
 @app.route("/sw.js")
