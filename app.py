@@ -41,6 +41,7 @@ from data_store import (  # noqa: E402
     import_passages,
     join_group_by_code,
     list_members,
+    rename_group,
     list_passage_dates,
     set_member_leader,
     set_member_muted,
@@ -623,6 +624,16 @@ def admin():
         ai_configured=ai_guide.is_configured(),
         today=local_time.today().isoformat(),
     )
+
+
+@app.route("/admin/group/rename", methods=["POST"])
+@admin_required
+def admin_rename_group():
+    """輔導改自己這一組的名字。只會動到自己這一組（group_id 取自目前登入的人）。"""
+    name = (request.form.get("name") or "").strip()
+    if name:
+        rename_group(_current_group_id(), name)
+    return redirect(url_for("admin", saved=1))
 
 
 @app.route("/admin/preview")

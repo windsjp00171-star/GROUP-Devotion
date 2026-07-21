@@ -15,6 +15,12 @@
   <section class="passage-card group-card">
     <p class="eyebrow">這個小組</p>
     <h2 class="group-card__name">{{ group.name }}</h2>
+    <form class="admin-form" method="post" action="{{ url_for('admin_rename_group') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label class="admin-label" for="group-name">改小組名字</label>
+      <input class="admin-input" type="text" id="group-name" name="name" value="{{ group.name }}" maxlength="40" required>
+      <button type="submit" class="btn btn--ghost">改名</button>
+    </form>
     {% if group.join_code %}
     <p class="admin-hint" style="margin-top:0;">把這串加入碼給組員，他們登入後貼進去就能加入這一組：</p>
     <p class="join-code" data-join-code>{{ group.join_code }}</p>

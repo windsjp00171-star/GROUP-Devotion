@@ -286,6 +286,19 @@ def create_group(name: str, member_id: str) -> dict:
     return group
 
 
+def rename_group(group_id: str, name: str) -> None:
+    """輔導改自己這一組的名字（開組之後也能改）。空字串忽略，不會把組名清成空白。"""
+    name = (name or "").strip()
+    if not group_id or not name:
+        return
+    if _demo_mode():
+        group = _demo_groups.get(group_id)
+        if group:
+            group["name"] = name
+        return
+    sb.table("groups").update({"name": name}).eq("id", group_id).execute()
+
+
 def join_group_by_code(member_id: str, code: str) -> dict | None:
     """用加入碼加入既有小組（加入的人是一般成員，不是輔導）。加入碼找不到回 None。"""
     group = get_group_by_code(code)

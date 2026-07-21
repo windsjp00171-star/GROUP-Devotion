@@ -104,6 +104,23 @@ def test_bad_join_code_stays_groupless(client):
     assert data_store.get_member_by_line_id("lost")["group_id"] is None
 
 
+def test_leader_can_rename_own_group(app):
+    client, gid = _make_group(app, "renamer", "舊名字")
+    token = _csrf(client)
+    client.post("/admin/group/rename", data={"csrf_token": token, "name": "週五學青小組"})
+    assert data_store.get_group(gid)["name"] == "週五學青小組"
+
+
+def test_rename_only_touches_own_group(app):
+    ca, gida = _make_group(app, "renameA", "A 的名字")
+    _, gidb = _make_group(app, "renameB", "B 的名字")
+    token = _csrf(ca)
+    ca.post("/admin/group/rename", data={"csrf_token": token, "name": "A 改過了"})
+    # A 改名不會動到 B。
+    assert data_store.get_group(gida)["name"] == "A 改過了"
+    assert data_store.get_group(gidb)["name"] == "B 的名字"
+
+
 # ---------- 每查詢隔離：A 組看不到 B 組 ----------
 
 
