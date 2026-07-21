@@ -12,7 +12,8 @@
   </header>
 
   {% if group %}
-  <section class="passage-card group-card">
+  <section class="passage-card group-card" data-tour-step="0"
+           data-tour-text="這是你這一組專屬的加入碼，複製給組員，他們登入後貼進去就加入你這一組（不會看到別組）。想改組名也在這裡改。">
     <p class="eyebrow">這個小組</p>
     <h2 class="group-card__name">{{ group.name }}</h2>
     <form class="admin-form" method="post" action="{{ url_for('admin_rename_group') }}">
