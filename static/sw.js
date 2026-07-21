@@ -3,7 +3,7 @@
 // 打一次網路更新快取），忘記把版本號往上加也只會晚一次載入才拿到新檔案，
 // 不會像純 cache-first 那樣永久卡住（這件事已經因為忘記加版本號發生過
 // 兩次事故，改成這個策略是為了不要再依賴「記得手動加版本號」這件事）。
-const CACHE_VERSION = 'v7';
+const CACHE_VERSION = 'v8';
 const STATIC_CACHE = 'static-' + CACHE_VERSION;
 const OFFLINE_URL = '/offline';
 const PRECACHE_ASSETS = [

@@ -156,19 +156,17 @@ alter table reflection_reactions enable row level security;
 alter table reflection_reactions drop constraint if exists reflection_reactions_kind_check;
 
 -- 2026-07-21：最小版多小組（加入碼）。groups 加 join_code（別人靠這串短碼加入你這一組），
--- members.group_id 放寬成可為 null（剛登入還沒加入任何組的人），並給既有那一組補一組加入碼。
+-- members.group_id 放寬成可為 null（剛登入還沒加入任何組的人）。
 alter table groups add column if not exists join_code text;
 create unique index if not exists idx_groups_join_code on groups (join_code);
 alter table members alter column group_id drop not null;
-
--- 給既有的（單一）小組補一組加入碼，這樣原本的成員完全不受影響、繼續留在原組，
--- 輔導也能到 /admin 看到這組的加入碼分享出去。只補還沒有加入碼的組。
-update groups
-set join_code = upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 6))
-where join_code is null;
 ```
 
 到 Supabase 專案的 SQL Editor 貼上執行一次就好，既有資料不受影響（既有成員都留在原本那一組）。
+
+**加入碼的「值」不用手動補**：欄位加好之後，任何還沒有加入碼的舊小組，輔導第一次打開
+`/admin` 時程式就會自動生一組、存回去（見 `data_store.ensure_join_code`）——輔導完全
+不需要知道 Supabase 是什麼、也不用跑任何 SQL。上面那段 DDL 是唯一需要開發者手動做一次的。
 
 ## 還沒做的事（卡在需要外部資源，先不做）
 

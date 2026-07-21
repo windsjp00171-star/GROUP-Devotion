@@ -111,6 +111,16 @@ def test_leader_can_rename_own_group(app):
     assert data_store.get_group(gid)["name"] == "週五學青小組"
 
 
+def test_admin_autofills_missing_join_code(app):
+    # 模擬「舊的組沒有加入碼」（加入碼欄位加上去之前就存在的組）。
+    client, gid = _make_group(app, "codeless", "沒碼組")
+    data_store._demo_groups[gid]["join_code"] = None
+    # 輔導只是打開後台，程式就自動補一組加入碼，不用去資料庫跑任何東西。
+    html = client.get("/admin").data.decode()
+    assert data_store.get_group(gid)["join_code"]
+    assert "還在設定中" not in html
+
+
 def test_rename_only_touches_own_group(app):
     ca, gida = _make_group(app, "renameA", "A 的名字")
     _, gidb = _make_group(app, "renameB", "B 的名字")

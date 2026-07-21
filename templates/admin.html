@@ -27,7 +27,7 @@
     <p class="join-code" data-join-code>{{ group.join_code }}</p>
     <button type="button" class="btn btn--ghost" data-copy-join-code>複製加入碼</button>
     {% else %}
-    <p class="admin-hint">這個小組還沒有加入碼（到 Supabase 跑一次 migration 補上就有了）。</p>
+    <p class="admin-hint">加入碼還在設定中，系統管理員完成資料庫設定後就會自動出現，這裡不用你處理。</p>
     {% endif %}
   </section>
   {% endif %}
@@ -60,8 +60,9 @@
   <p class="admin-hint">還沒設定 AI key（GROQ_API_KEY / GEMINI_API_KEY / ANTHROPIC_API_KEY），引導問題留空的話會用預設那句，不會自動生成。</p>
   {% endif %}
 
-  <section class="passage-card" data-tour-step="1" data-tour-text="選書卷、填章節，就會自動幫你帶出和合本的經文，不用自己貼。">
-    <h2 class="admin-section-title">用書卷＋章節排一天（自動帶出經文）</h2>
+  <section class="passage-card">
+    <h2 class="admin-section-title" data-tour-step="1"
+        data-tour-text="選書卷、填章節，就會自動幫你帶出和合本的經文，不用自己貼。">用書卷＋章節排一天（自動帶出經文）</h2>
     <form class="admin-form" method="post" action="{{ url_for('admin_schedule_by_range') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
@@ -95,8 +96,9 @@
     </form>
   </section>
 
-  <section class="passage-card" data-tour-step="2" data-tour-text="一次排好接下來好幾天，上傳一個 Excel 就好，不用每天回來排。">
-    <h2 class="admin-section-title">批次匯入（一次排好接下來好幾天）</h2>
+  <section class="passage-card">
+    <h2 class="admin-section-title" data-tour-step="2"
+        data-tour-text="一次排好接下來好幾天，上傳一個 Excel 就好，不用每天回來排。">批次匯入（一次排好接下來好幾天）</h2>
     <p class="admin-hint">上傳 xlsx，欄位是 date / book / range / guiding_question（最後一個選填），跟天父日記的 plan.xlsx 同一種格式。</p>
     <form class="admin-form" method="post" action="{{ url_for('admin_import') }}" enctype="multipart/form-data">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

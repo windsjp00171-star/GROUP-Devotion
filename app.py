@@ -28,8 +28,8 @@ from data_store import (  # noqa: E402
     create_group,
     delete_own_reflection,
     delete_reflection,
+    ensure_join_code,
     export_passage,
-    get_group,
     get_member_by_line_id,
     get_my_reflections,
     get_passage_by_date,
@@ -632,10 +632,11 @@ def admin():
     # 全文帶出來，輔導不能自己打／改字句——聖經的字句不該被編輯。
     gid = _current_group_id()
     passage = get_today_passage(gid)
+    # 順便確保這組有加入碼——舊的組沒有的話就地補一組，輔導不用去資料庫跑任何東西。
     return render_template(
         "admin.html",
         passage=passage,
-        group=get_group(gid),
+        group=ensure_join_code(gid),
         user=get_user(),
         saved=request.args.get("saved") == "1",
         imported=request.args.get("imported"),

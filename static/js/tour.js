@@ -71,27 +71,40 @@ document.addEventListener('DOMContentLoaded', () => {
   function positionOn(el) {
     const rect = el.getBoundingClientRect();
     const pad = 8;
-    spotlight.style.top = `${rect.top - pad}px`;
-    spotlight.style.left = `${rect.left - pad}px`;
-    spotlight.style.width = `${rect.width + pad * 2}px`;
-    spotlight.style.height = `${rect.height + pad * 2}px`;
-
+    const margin = 8; // 框跟畫面邊緣至少留這麼多，不要貼齊或爆出去
     const viewportWidth = document.documentElement.clientWidth;
     const viewportHeight = document.documentElement.clientHeight;
-    const calloutWidth = Math.min(280, viewportWidth - 40);
-    const left = Math.max(16, Math.min(rect.left, viewportWidth - calloutWidth - 16));
 
-    // 目標在畫面下半部就把說明卡放在它上面，不然卡片可能被擠出畫面外。
-    const spaceBelow = viewportHeight - rect.bottom;
+    // 關鍵修正：把打光的框「夾」在畫面範圍內。目標比整個畫面還高（例如後台那些很長的
+    // 表單）時，rect.top 會是負的、rect.bottom 會超出畫面，直接拿原始值去畫，框跟說明卡
+    // 都會爆到畫面外、看起來怪怪的一大塊。改成先算出「可見的那一段」再畫。
+    const boxTop = Math.max(margin, rect.top - pad);
+    const boxBottom = Math.min(viewportHeight - margin, rect.bottom + pad);
+    const boxLeft = Math.max(margin, rect.left - pad);
+    const boxRight = Math.min(viewportWidth - margin, rect.right + pad);
+    const boxHeight = Math.max(0, boxBottom - boxTop);
+    const boxWidth = Math.max(0, boxRight - boxLeft);
+
+    spotlight.style.top = `${boxTop}px`;
+    spotlight.style.left = `${boxLeft}px`;
+    spotlight.style.width = `${boxWidth}px`;
+    spotlight.style.height = `${boxHeight}px`;
+
+    const calloutWidth = Math.min(280, viewportWidth - 40);
+    const left = Math.max(16, Math.min(boxLeft, viewportWidth - calloutWidth - 16));
+
+    // 說明卡放在框的下面；下面空間不夠（框已經很靠近畫面底部）就改放上面。
+    // 一律用夾好的 boxTop／boxBottom 來算，不用原始 rect，才不會被爆出畫面的座標帶歪。
+    const spaceBelow = viewportHeight - boxBottom;
     const calloutOnTop = spaceBelow < 160;
 
     callout.style.left = `${left}px`;
     if (calloutOnTop) {
       callout.style.top = 'auto';
-      callout.style.bottom = `${viewportHeight - rect.top + 16}px`;
+      callout.style.bottom = `${viewportHeight - boxTop + 16}px`;
     } else {
       callout.style.bottom = 'auto';
-      callout.style.top = `${rect.bottom + 16}px`;
+      callout.style.top = `${boxBottom + 16}px`;
     }
   }
 
@@ -108,7 +121,11 @@ document.addEventListener('DOMContentLoaded', () => {
     nextBtn.textContent = index === steps.length - 1 ? '知道了' : '下一步';
     renderDots();
 
-    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    // 目標比畫面矮就置中；比畫面高（例如很長的表單）就對齊到頂端，
+    // 讓可見的那一段從有意義的開頭（標題）開始，而不是卡在中段。
+    const viewportHeight = document.documentElement.clientHeight;
+    const tall = el.getBoundingClientRect().height > viewportHeight - 160;
+    el.scrollIntoView({ block: tall ? 'start' : 'center', behavior: 'smooth' });
     waitForScrollSettle(() => positionOn(el));
   }
 

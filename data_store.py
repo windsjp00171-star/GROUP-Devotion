@@ -286,6 +286,38 @@ def create_group(name: str, member_id: str) -> dict:
     return group
 
 
+def ensure_join_code(group_id: str) -> dict | None:
+    """拿一組的資料，順便確保它有加入碼。舊的小組（加入碼這個欄位加上去之前就存在的，
+    例如一開始那組「恩典少年」）沒有加入碼，這裡在輔導第一次打開後台時就地補一組、
+    存回資料庫——不用任何人去 Supabase 跑 SQL，輔導根本不需要知道資料庫是什麼。
+
+    唯一還是需要開發者手動做一次的，是「把 join_code 這個欄位加進資料表」那一步 DDL
+    （欄位不存在就沒地方存值）；欄位加好之後，值一律由程式自動補，不再需要人工。"""
+    group = get_group(group_id)
+    if not group or group.get("join_code"):
+        return group
+
+    # 補一組還沒被用過的加入碼。
+    code = _generate_join_code()
+    for _ in range(10):
+        if not get_group_by_code(code):
+            break
+        code = _generate_join_code()
+
+    if _demo_mode():
+        group["join_code"] = code  # get_group 回的就是 _demo_groups 裡的同一個 dict
+        return group
+
+    try:
+        result = sb.table("groups").update({"join_code": code}).eq("id", group_id).execute()
+        return result.data[0] if result.data else {**group, "join_code": code}
+    except Exception as exc:  # noqa: BLE001 - join_code 欄位還沒加（migration 沒跑）就安靜退回
+        message = getattr(exc, "message", None) or str(exc)
+        if getattr(exc, "code", None) == "PGRST204" and "join_code" in message:
+            return group  # 欄位還不存在，維持沒有加入碼；這是開發者要補的一步，不是輔導
+        raise
+
+
 def rename_group(group_id: str, name: str) -> None:
     """輔導改自己這一組的名字（開組之後也能改）。空字串忽略，不會把組名清成空白。"""
     name = (name or "").strip()
