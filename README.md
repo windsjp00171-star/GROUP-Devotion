@@ -1,10 +1,10 @@
 # GROUP-Devotion
 
-一個給學青（國高中到社青）的群體共讀靈修工具——團體版的天父日記。
+一個給學青（國高中到社青）小組的群體共讀靈修工具。
 
-每天小組讀同一段經文，留下一句領受，非同步看見彼此的領受，在小夥伴腳邊長出一叢屬於這個小組的花園。
+每天小組讀同一段經文，留下一句領受，非同步看見彼此的領受，在小夥伴腳邊長出一叢屬於這個小組的花園。刻意不做打卡、進度條、排行榜、催讀通知——沒有比較、沒有壓力。
 
-視覺與互動節奏參考「以馬忤斯路上」原型，但用 Flask + Jinja2 + 純 HTML/CSS 從頭實作，不是原型程式碼的搬移。
+視覺與互動走暖色、圓角、慢節奏、無壓力感，用 Flask + Jinja2 + 純 HTML/CSS 從頭實作。
 
 常見問題（免費嗎、資料安全嗎、開發者看得到嗎、服務收掉怎麼辦…）收在 [FAQ.md](FAQ.md)。
 
@@ -61,7 +61,7 @@ data_store.py             資料層：接了 Supabase 存真資料，沒接就�
 scripture.py              和合本查詢層：書卷＋章節 → 逐句經文陣列
 ai_guide.py                AI 生成引導問題（Groq → Gemini → Anthropic，都沒設定就回 None）
 plan_import.py            解析輔導上傳的 xlsx 讀經計畫
-scripture/cuv.json         和合本聖經全文（跟天父日記共用同一份資料）
+scripture/cuv.json         和合本聖經全文（1919，公有領域）
 schema.sql                Supabase 資料庫結構
 templates/                 Jinja2 樣板
 static/css/style.css       視覺樣式（暖色、圓角、無壓力感）
@@ -77,28 +77,23 @@ static/sw.js               Service worker（用 /sw.js 這個路由提供，見 
 - 對別人的領受可以留固定反應（🌼／💛／✨…，各自對應寫死的鼓勵語，不是自由留言），一人一則領受只能留一種，可以換、可以取消
 - 輔導後台 `/admin`：兩種排經文的方式，經文字句一律從和合本全文帶出來，輔導不能自己打／改字句（聖經的字句不由我們改）
   - 書卷＋章節（選書卷、填章節，自動從和合本全文帶出經文；可加「主題副標」幫這段取個主題，只加標題、不動經文）
-  - 批次匯入 xlsx（跟天父日記的 `plan.xlsx` 同一種欄位：`date / book / range / guiding_question`，一次排好接下來好幾天，`/admin/template` 可下載空白範本）
+  - 批次匯入 xlsx（欄位 `date / book / range / guiding_question`，一次排好接下來好幾天，`/admin/template` 可下載空白範本）
   - 引導問題留空會用 AI 生一句（`GROQ_API_KEY` / `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` 擇一設定即可，優先順序 Groq → Gemini → Anthropic）
   - 都可以同時種頭香（留自己的第一句領受，只對「今天」有效）
 - 各組輔導可以禁言自己組內的成員（平台方不可能一個人管所有組，所以這個權限下放到各組輔導）：不是封鎖帳號，還是能讀、能看動態牆，只是不能再留新的領受。永久管理員（`ADMIN_LINE_USER_IDS`）則是跨組的最高權限，留給平台級的安全處理
 - `/history`：回顧月曆，往回翻小組排過的日子，點進去可以完整寫領受（不只是唯讀）；格子只代表「那天有沒有排經文」，不標記「你有沒有寫」，不是完成率視覺化
 - LINE Login OAuth 骨架、`@login_required` / `@admin_required`、最小可用的 CSRF 保護
-- 首頁「到 bibile-actionbook 深度閱讀這段」連結：會直接跳到今天這段對應的書卷／章節，不是固定連到首頁
+- 首頁「深度閱讀這段」連結（選用）：設了 `BIBLE_ACTIONBOOK_URL` 就會出現，直接跳到今天這段對應的書卷／章節；沒設就不顯示
 - 真的 PWA：可以「加入主畫面」變成看起來像原生 app、有 service worker、離線時顯示 `/offline` 而不是瀏覽器的錯誤頁
 - Rule 14 數位遺囑模組起點：一鍵匯出 + 離線閱讀器（見下）
 - Rule 15 教學按鈕（右上角「？」）
 - Rule 16 CHANGELOG.md
 
-## 關於「沿用 mark_core」：這個套件目前不存在
+## 沒有依賴共用框架
 
-開工前把 bibile-actionbook、tianfu-diary 兩個姊妹 repo 加進來核對過，專案簡報裡提到的
-`mark_core` 共用套件（`supabase_client` / `auth` / `csrf` / `notification_queue` /
-`@login_required` / 統一 API 回傳格式）**目前在帳號裡並不存在**，兩個姊妹專案也都是
-各自 ad hoc 接 Supabase／LINE，沒有真的共用套件可以 import。細節記在 `CHANGELOG.md`。
-
-這一版的做法：把姊妹專案裡「真的在跑」的模式抄過來（Supabase client 初始化方式、
-LINE OAuth 授權碼流程），`@login_required`、CSRF 則是這個專案自己第一次寫出來，
-不是「沿用」而是「補上」——之後如果真的要建一個共用套件，這裡會是第一個可以抽出去的地方。
+登入（LINE OAuth 授權碼流程）、`@login_required` / `@admin_required`、CSRF 保護，
+都是這個專案自己從頭寫的最小實作，沒有依賴任何共用套件——想看它到底怎麼做，直接讀
+`auth.py`、`csrf.py` 就好，不用先去搞懂一個大框架。開發過程的取捨記在 `CHANGELOG.md`。
 
 ## 資料庫異動（migration）
 
@@ -170,10 +165,9 @@ alter table members alter column group_id drop not null;
 `/admin` 時程式就會自動生一組、存回去（見 `data_store.ensure_join_code`）——輔導完全
 不需要知道 Supabase 是什麼、也不用跑任何 SQL。上面那段 DDL 是唯一需要開發者手動做一次的。
 
-## 還沒做的事（卡在需要外部資源，先不做）
+## 還沒做的事
 
-- 天父日記的每日經文排程後台，目前是「照做一份自己的」，不是共用同一張表
-- 圖鑑系統、co-op RPG、正式美術素材——這些是北極星文件裡明訂的第二階段，這一版不做
+- 圖鑑系統、co-op RPG、正式美術素材——想做但還沒做的第二階段功能，這一版不做
 - 多小組目前是「最小版」：一人只屬於一組、加入碼沒有到期或人數上限、也還沒有「換組／退出」的畫面（要換組目前得從資料庫改）。夠一個站台服務好幾個小組，但還不是完整的組織管理
 
 ## Rule 14：如果這個服務有一天收掉了
