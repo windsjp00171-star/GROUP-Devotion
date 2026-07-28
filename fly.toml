@@ -1,0 +1,25 @@
+# Fly.io 部署設定。app 名字要全球唯一，第一次跑 `fly launch` 時它會問你、
+# 若被用掉會請你換一個（例如 group-devotion-tw），並自動填回這裡。
+app = "group-devotion"
+primary_region = "nrt"  # 東京，離台灣近、延遲低
+
+[build]
+
+[http_service]
+  internal_port = 8080          # 對上 Dockerfile 裡 gunicorn 綁的 0.0.0.0:8080
+  force_https = true            # 一律走 HTTPS（app 的 cookie Secure 也才成立）
+  auto_stop_machines = "stop"   # 閒置就停機器 → 沒人用時趨近零花費
+  auto_start_machines = true    # 有人來訪自動喚醒（Fly 的喚醒只要幾秒）
+  min_machines_running = 0      # 想要「永不休眠、喚醒更即時」就改成 1（花費會多一點）
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/healthz"           # app 裡本來就有這條健康檢查路由
+
+[[vm]]
+  memory = "512mb"              # 這支 App 會把整本和合本＋幾個 AI SDK 讀進記憶體，
+  cpu_kind = "shared"          # 256MB 容易 OOM，用 512MB 穩一點（閒置停機時不算錢）
+  cpus = 1

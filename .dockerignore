@@ -1,0 +1,17 @@
+# 千萬要排除 .env：不然 fly deploy 從本機打包時，COPY . . 會把你真實的金鑰
+# 一起烤進 image 裡（等於把密鑰塞進部署產物）。金鑰一律用 `fly secrets set` 設。
+.env
+.env.*
+
+# 這些放進 image 沒意義，只是讓 image 變大、建置變慢。
+.git
+.gitignore
+.venv
+venv
+__pycache__
+*.pyc
+.pytest_cache
+tests
+.github
+scratchpad
+*.md
